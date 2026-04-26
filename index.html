@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <meta name="theme-color" content="#ffffff">
+  <title>Caderno de Oliveiras</title>
+  <link rel="manifest" href="manifest.json">
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    :root{
+      --bg:#ffffff;--bg2:#f5f4f0;--bg3:#eceae3;
+      --border:#e0ddd5;--border2:#d0cdc5;
+      --text:#1a1a18;--text2:#5a5a55;--text3:#9a9a95;
+      --radius:10px;--radius-sm:6px;
+      --font:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    }
+    body{font-family:var(--font);background:var(--bg2);color:var(--text);min-height:100vh;}
+    .app{max-width:700px;margin:0 auto;padding:1rem;}
+
+    /* Tabs */
+    .tabs-wrap{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1.25rem;align-items:center;}
+    .tab{padding:7px 13px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg);cursor:pointer;font-size:13px;color:var(--text2);transition:all 0.15s;font-family:var(--font);}
+    .tab.active{background:var(--text);color:#fff;border-color:var(--text);}
+    .tab:hover:not(.active){background:var(--bg3);}
+    .tab-add{padding:7px 11px;border-radius:var(--radius-sm);border:1px dashed var(--border2);background:transparent;cursor:pointer;font-size:13px;color:var(--text3);font-family:var(--font);}
+    .tab-add:hover{color:var(--text);border-color:var(--text2);background:var(--bg);}
+    .section{display:none;}.section.active{display:block;}
+
+    /* Cards */
+    .card{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:1rem;overflow:hidden;}
+    .card-pad{padding:1rem 1.125rem;}
+    .card-header{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-bottom:1px solid var(--border);}
+    .card-title{font-size:14px;font-weight:600;color:var(--text);}
+
+    /* Fields */
+    .field-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+    .field{display:flex;flex-direction:column;gap:4px;}
+    .field label{font-size:11px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;}
+    .field input,.field textarea,.field select{font-size:13px;padding:7px 9px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg2);color:var(--text);width:100%;font-family:var(--font);}
+    .field input:focus,.field textarea:focus{outline:none;border-color:var(--text2);background:var(--bg);}
+    .field textarea{resize:vertical;min-height:60px;}
+    .full-width{grid-column:1/-1;}
+    .name-edit{background:none;border:none;border-bottom:1px dashed var(--border2);font-size:15px;font-weight:600;color:var(--text);padding:0 0 2px;flex:1;font-family:var(--font);}
+    .name-edit:focus{outline:none;border-bottom-color:var(--text2);}
+
+    /* Badge */
+    .badge{font-size:11px;padding:3px 9px;border-radius:20px;font-weight:500;}
+    .badge-green{background:#e8f5d8;color:#3a6b10;}
+    .badge-amber{background:#fde8c8;color:#8a4f0a;}
+
+    /* Summary */
+    .summary-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:1rem;}
+    .metric{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px;}
+    .metric-label{font-size:11px;color:var(--text3);margin-bottom:3px;font-weight:500;}
+    .metric-value{font-size:22px;font-weight:600;color:var(--text);}
+    .metric-sub{font-size:11px;color:var(--text3);margin-top:1px;}
+
+    /* Parcela row */
+    .parcela-row{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--border);}
+    .parcela-row:last-child{border-bottom:none;}
+    .parcela-num{width:30px;height:30px;border-radius:50%;background:#e8eef8;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#2a5aa0;flex-shrink:0;}
+    .parcela-info{flex:1;}
+    .parcela-name-v{font-size:14px;font-weight:500;}
+    .parcela-detail{font-size:12px;color:var(--text2);margin-top:2px;}
+    .go-btn{font-size:12px;padding:5px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:transparent;color:var(--text2);cursor:pointer;font-family:var(--font);}
+    .go-btn:hover{background:var(--bg3);}
+
+    /* Category blocks */
+    .cat-block{border-bottom:1px solid var(--border);}
+    .cat-block:last-child{border-bottom:none;}
+    .cat-header{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;cursor:pointer;user-select:none;}
+    .cat-header:hover{background:var(--bg2);}
+    .cat-left{display:flex;align-items:center;gap:9px;}
+    .cat-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+    .cat-name{font-size:13px;font-weight:500;}
+    .cat-count{font-size:12px;color:var(--text3);}
+    .cat-right{display:flex;align-items:center;gap:10px;}
+    .cat-total{font-size:13px;font-weight:500;color:var(--text2);}
+    .cat-chevron{font-size:10px;color:var(--text3);transition:transform 0.2s;}
+    .cat-chevron.open{transform:rotate(180deg);}
+    .cat-body{display:none;border-top:1px solid var(--border);background:var(--bg2);}
+    .cat-body.open{display:block;}
+    .cat-body-inner{padding:12px 16px;}
+
+    /* Entries */
+    .entry{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:8px;overflow:hidden;}
+    .entry:last-of-type{margin-bottom:12px;}
+    .entry-header{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;}
+    .entry-date{font-size:11px;color:var(--text3);white-space:nowrap;margin-top:2px;flex-shrink:0;min-width:68px;font-weight:500;}
+    .entry-content{flex:1;}
+    .entry-proc{font-size:13px;line-height:1.6;white-space:pre-wrap;}
+    .entry-fito{margin-top:5px;display:flex;flex-wrap:wrap;gap:4px;}
+    .fito-tag{font-size:11px;padding:2px 7px;border-radius:10px;background:#faeae6;color:#9a3820;}
+    .entry-cost{font-size:13px;font-weight:600;color:var(--text2);white-space:nowrap;flex-shrink:0;}
+    .entry-actions{display:flex;gap:6px;padding:0 12px 8px;justify-content:flex-end;}
+    .act-btn{font-size:11px;padding:3px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:transparent;color:var(--text3);cursor:pointer;font-family:var(--font);}
+    .act-btn:hover{background:var(--bg2);color:var(--text);}
+    .act-btn.del:hover{border-color:#f0b8b8;color:#a02020;background:#fef0f0;}
+    .add-entry-btn{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text3);background:none;border:1px dashed var(--border2);border-radius:var(--radius-sm);padding:8px 12px;cursor:pointer;width:100%;font-family:var(--font);}
+    .add-entry-btn:hover{color:var(--text);border-color:var(--text2);background:var(--bg);}
+
+    /* Photos */
+    .photo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;}
+    .photo-card{position:relative;border-radius:var(--radius-sm);overflow:hidden;aspect-ratio:1;border:1px solid var(--border);cursor:pointer;}
+    .photo-card img{width:100%;height:100%;object-fit:cover;display:block;}
+    .photo-card-overlay{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,0.55));padding:5px 7px;}
+    .photo-card-date{font-size:10px;color:#fff;}
+    .photo-card-del{position:absolute;top:4px;right:4px;background:rgba(0,0,0,0.45);border:none;color:#fff;border-radius:50%;width:20px;height:20px;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;}
+    .photo-card-del:hover{background:rgba(160,32,32,0.85);}
+    .upload-zone{border:1px dashed var(--border2);border-radius:var(--radius-sm);padding:18px;text-align:center;cursor:pointer;margin-bottom:12px;}
+    .upload-zone:hover{background:var(--bg);border-color:var(--text2);}
+    .upload-zone p{font-size:13px;color:var(--text3);margin-top:5px;}
+
+    /* Timeline */
+    .ov-filters{display:flex;gap:6px;flex-wrap:wrap;padding:10px 14px;border-bottom:1px solid var(--border);background:var(--bg2);}
+    .ov-filter{font-size:12px;padding:4px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:transparent;cursor:pointer;color:var(--text2);font-family:var(--font);}
+    .ov-filter.active{background:var(--text);color:#fff;border-color:var(--text);}
+    .ov-timeline{padding:14px;}
+    .ov-day{margin-bottom:18px;}
+    .ov-day-header{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+    .ov-day-line{flex:1;height:1px;background:var(--border);}
+    .ov-day-date{font-size:12px;font-weight:600;color:var(--text2);white-space:nowrap;}
+    .ov-item{display:flex;gap:10px;align-items:flex-start;padding:9px 12px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:6px;}
+    .ov-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:4px;}
+    .ov-item-body{flex:1;}
+    .ov-item-top{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:3px;}
+    .ov-parcela{font-size:11px;font-weight:600;color:var(--text2);}
+    .ov-cat{font-size:11px;padding:1px 7px;border-radius:10px;font-weight:500;}
+    .ov-proc{font-size:13px;line-height:1.5;}
+    .ov-cost{font-size:12px;font-weight:600;color:var(--text2);white-space:nowrap;flex-shrink:0;}
+    .ov-empty{font-size:13px;color:var(--text3);text-align:center;padding:2rem 0;}
+    .ov-thumb{width:46px;height:46px;border-radius:var(--radius-sm);object-fit:cover;flex-shrink:0;cursor:pointer;border:1px solid var(--border);}
+
+    /* Calendar */
+    .cal-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:1rem;}
+    .cal-month{background:var(--bg2);border-radius:var(--radius-sm);padding:8px 6px;}
+    .cal-month-name{font-size:11px;font-weight:600;color:var(--text2);text-align:center;margin-bottom:5px;}
+    .cal-tasks{display:flex;flex-direction:column;gap:3px;}
+    .cal-task{font-size:10px;padding:2px 5px;border-radius:3px;line-height:1.4;}
+    .t-fert{background:#e8f5d8;color:#3a6b10;}
+    .t-rega{background:#daeaf8;color:#1a5a95;}
+    .t-poda{background:#fde8c8;color:#8a4f0a;}
+    .t-trat{background:#faeae6;color:#9a3820;}
+    .t-col{background:#eceaff;color:#4a40b0;}
+    .legend{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:1rem;}
+    .leg-item{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text2);}
+    .leg-dot{width:9px;height:9px;border-radius:2px;}
+
+    /* Modals */
+    .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);align-items:center;justify-content:center;z-index:100;padding:1rem;}
+    .modal-bg.open{display:flex;}
+    .modal{background:var(--bg);border-radius:var(--radius);border:1px solid var(--border);padding:1.25rem;width:420px;max-width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.12);}
+    .modal h3{font-size:15px;font-weight:600;margin-bottom:3px;}
+    .modal-sub{font-size:12px;color:var(--text3);margin-bottom:1rem;}
+    .mfield{display:flex;flex-direction:column;gap:4px;margin-bottom:10px;}
+    .mfield label{font-size:11px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;}
+    .mfield input,.mfield textarea,.mfield select{font-size:13px;padding:7px 9px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg2);color:var(--text);width:100%;font-family:var(--font);}
+    .mfield textarea{resize:vertical;min-height:80px;}
+    .modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:1rem;}
+    .btn-cancel{font-size:13px;padding:7px 14px;border-radius:var(--radius-sm);border:1px solid var(--border);background:transparent;color:var(--text2);cursor:pointer;font-family:var(--font);}
+    .btn-save{font-size:13px;padding:7px 16px;border-radius:var(--radius-sm);background:var(--text);color:#fff;border:none;cursor:pointer;font-weight:500;font-family:var(--font);}
+    .btn-save:hover{opacity:.85;}
+    .fito-section{display:none;border-top:1px solid var(--border);margin-top:6px;padding-top:10px;}
+    .fito-section.show{display:block;}
+    .foto-preview{width:100%;max-height:180px;object-fit:cover;border-radius:var(--radius-sm);margin-bottom:8px;display:none;}
+    .del-parcela-btn{font-size:12px;padding:4px 10px;border-radius:var(--radius-sm);border:1px solid #f0b8b8;background:transparent;color:#a02020;cursor:pointer;white-space:nowrap;font-family:var(--font);}
+    .del-parcela-btn:hover{background:#fef0f0;}
+
+    /* Lightbox */
+    .lightbox{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.93);z-index:200;align-items:center;justify-content:center;flex-direction:column;gap:12px;}
+    .lightbox.open{display:flex;}
+    .lightbox img{max-width:90vw;max-height:75vh;object-fit:contain;border-radius:var(--radius);}
+    .lightbox-info{color:#ccc;font-size:13px;text-align:center;max-width:400px;}
+    .lightbox-close{position:absolute;top:16px;right:16px;background:rgba(255,255,255,0.15);border:none;color:#fff;border-radius:50%;width:34px;height:34px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+
+    /* Sync indicator */
+    .sync-bar{position:fixed;bottom:0;left:0;right:0;background:var(--text);color:#fff;font-size:12px;padding:6px 16px;text-align:center;z-index:50;display:none;}
+    .sync-bar.show{display:block;}
+
+    /* Header */
+    .app-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;}
+    .app-title{font-size:18px;font-weight:700;color:var(--text);}
+    .app-title span{color:var(--text3);font-weight:400;font-size:14px;margin-left:6px;}
+    .sync-status{font-size:12px;color:var(--text3);display:flex;align-items:center;gap:5px;}
+    .sync-dot{width:7px;height:7px;border-radius:50%;background:#aaa;}
+    .sync-dot.ok{background:#4a9e4a;}
+    .sync-dot.syncing{background:#e0a020;animation:pulse 1s infinite;}
+    @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
+
+    @media(max-width:480px){
+      .summary-grid{grid-template-columns:repeat(2,1fr);}
+      .cal-grid{grid-template-columns:repeat(3,1fr);}
+      .field-grid{grid-template-columns:1fr;}
+      .full-width{grid-column:1;}
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <div class="app-header">
+    <div class="app-title">🫒 Oliveiras <span>caderno de campo</span></div>
+    <div class="sync-status" id="syncStatus">
+      <div class="sync-dot" id="syncDot"></div>
+      <span id="syncText">A ligar...</span>
+    </div>
+  </div>
+  <div class="tabs-wrap" id="mainTabs"></div>
+  <div id="sections"></div>
+</div>
+
+<!-- Modal operação -->
+<div class="modal-bg" id="modalBg">
+  <div class="modal">
+    <h3 id="mTitle">Nova entrada</h3>
+    <div class="modal-sub" id="mSub"></div>
+    <div class="mfield"><label>Data</label><input type="date" id="mData"></div>
+    <div class="mfield"><label>Procedimento / descrição</label><textarea id="mProc" placeholder="Descreve o que foi feito..."></textarea></div>
+    <div class="mfield"><label>Custo (€) — opcional</label><input type="number" id="mCusto" placeholder="0.00" min="0" step="0.01"></div>
+    <div class="fito-section" id="fitoSection">
+      <div class="mfield"><label>Marca comercial</label><input type="text" id="mMarca"></div>
+      <div class="mfield"><label>Substância ativa</label><input type="text" id="mSubst"></div>
+      <div class="mfield"><label>Dose / quantidade</label><input type="text" id="mQtd"></div>
+      <div class="mfield"><label>Praga / alvo</label><input type="text" id="mAlvo"></div>
+    </div>
+    <div class="mfield"><label>Notas — opcional</label><input type="text" id="mNotas"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
+      <button class="btn-save" onclick="saveEntry()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal foto -->
+<div class="modal-bg" id="fotoModalBg">
+  <div class="modal">
+    <h3>Nova fotografia</h3>
+    <div class="modal-sub" id="fotoModalSub"></div>
+    <img id="fotoPreview" class="foto-preview">
+    <div class="upload-zone" onclick="document.getElementById('fotoFileInput').click()">
+      <div style="font-size:26px;">📷</div>
+      <p>Clica para escolher uma foto ou tirar uma</p>
+    </div>
+    <input type="file" id="fotoFileInput" accept="image/*" capture="environment" style="display:none" onchange="onFotoSelected(event)">
+    <div class="mfield"><label>Data</label><input type="date" id="fotoData"></div>
+    <div class="mfield"><label>Nota / descrição</label><textarea id="fotoNota" placeholder="ex: Estado após poda, início de floração..." style="min-height:60px;"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeFotoModal()">Cancelar</button>
+      <button class="btn-save" onclick="saveFoto()">Guardar foto</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal nova parcela -->
+<div class="modal-bg" id="npModalBg">
+  <div class="modal" style="width:360px;">
+    <h3>Nova parcela</h3>
+    <div class="modal-sub">Podes editar todos os detalhes depois.</div>
+    <div class="mfield"><label>Nome da parcela</label><input type="text" id="npNome" placeholder="ex: Quinta do Vale, Parcela Norte..."></div>
+    <div class="mfield"><label>Área (ha) — opcional</label><input type="number" id="npArea" placeholder="0.00" step="0.01" min="0"></div>
+    <div class="mfield"><label>Estado inicial</label>
+      <select id="npEstado">
+        <option value="ativa">Com oliveiras (ativa)</option>
+        <option value="porPlantar">Por plantar</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeNpModal()">Cancelar</button>
+      <button class="btn-save" onclick="criarParcela()">Criar parcela</button>
+    </div>
+  </div>
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <button class="lightbox-close" onclick="closeLightbox()">×</button>
+  <img id="lbImg" src="">
+  <div class="lightbox-info" id="lbInfo"></div>
+</div>
+
+<div class="sync-bar" id="syncBar">A guardar...</div>
+
+<!-- Firebase SDK -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyANCRL3RWd4Wa5X2JMPTsFCnKvZkJFqpaw",
+  authDomain: "caderno-oliveiras.firebaseapp.com",
+  projectId: "caderno-oliveiras",
+  storageBucket: "caderno-oliveiras.firebasestorage.app",
+  messagingSenderId: "309706449348",
+  appId: "1:309706449348:web:e740f41ac177d843cf8491"
+};
+
+const fireApp = initializeApp(firebaseConfig);
+const db = getFirestore(fireApp);
+const STATE_DOC = "caderno/main";
+
+// ── CONSTANTS ──────────────────────────────────────────────
+const CATS=[
+  {id:'custo',   label:'Custos',               dot:'#d94040',bg:'#faeaea',tc:'#922020'},
+  {id:'solo',    label:'Manutenção do solo',    dot:'#5a9020',bg:'#e8f5d8',tc:'#3a6b10'},
+  {id:'vedacao', label:'Manutenção da vedação', dot:'#b07010',bg:'#fde8c8',tc:'#8a4f0a'},
+  {id:'adubacao',label:'Adubação',              dot:'#1a9870',bg:'#d8f5ea',tc:'#0e6e50'},
+  {id:'rega',    label:'Rega',                  dot:'#2878cc',bg:'#daeaf8',tc:'#1a5a95'},
+  {id:'fito',    label:'Fitofármacos',           dot:'#c05030',bg:'#faeae6',tc:'#9a3820'},
+  {id:'outro',   label:'Outro',                  dot:'#808078',bg:'#eeecea',tc:'#505048'},
+];
+const CAL=[
+  {m:'Jan',tasks:[{c:'t-poda',t:'Poda de formação'},{c:'t-trat',t:'Caldo bordalês'}]},
+  {m:'Fev',tasks:[{c:'t-poda',t:'Poda de produção'},{c:'t-fert',t:'Adubo fundo (P,K)'}]},
+  {m:'Mar',tasks:[{c:'t-fert',t:'Azoto (ureia)'},{c:'t-trat',t:'Prevenção gafa'}]},
+  {m:'Abr',tasks:[{c:'t-fert',t:'Foliar (micronutr.)'},{c:'t-trat',t:'Monitoriz. mosca'}]},
+  {m:'Mai',tasks:[{c:'t-rega',t:'Início rega'},{c:'t-trat',t:'Traça da oliveira'}]},
+  {m:'Jun',tasks:[{c:'t-rega',t:'Rega regular'},{c:'t-fert',t:'Azoto cobertura'}]},
+  {m:'Jul',tasks:[{c:'t-rega',t:'Rega intensa'},{c:'t-trat',t:'Mosca oliveira'}]},
+  {m:'Ago',tasks:[{c:'t-rega',t:'Manter rega'},{c:'t-trat',t:'Controlo mosca'}]},
+  {m:'Set',tasks:[{c:'t-col',t:'Colheita verde'},{c:'t-rega',t:'Reduzir rega'}]},
+  {m:'Out',tasks:[{c:'t-col',t:'Colheita mista'},{c:'t-trat',t:'Pós-colheita'}]},
+  {m:'Nov',tasks:[{c:'t-col',t:'Colheita preta'},{c:'t-fert',t:'Fósforo e potássio'}]},
+  {m:'Dez',tasks:[{c:'t-poda',t:'Preparar poda'},{c:'t-fert',t:'Estrume orgânico'}]},
+];
+
+// ── STATE ───────────────────────────────────────────────────
+function newParcela(n){
+  const en={};CATS.forEach(c=>{en[c.id]=[];});
+  return {id:uid(),n,nome:'Parcela '+n,area:'',arvores:'',variedade:'',plantacao:'',notas:'',entries:en,fotos:[],porPlantar:false};
+}
+function defState(){
+  return {parcelas:[
+    {...newParcela(1),nome:'Parcela 1'},
+    {...newParcela(2),nome:'Parcela 2'},
+    {...newParcela(3),nome:'Parcela 3'},
+    {...newParcela(4),nome:'Parcela 4'},
+    {...newParcela(5),nome:'Parcela 5',porPlantar:true},
+  ]};
+}
+
+let state=defState();
+let curP=null,curCat=null,editId=null,openCats={},ovParFilter='all',ovCatFilter='all',fotoB64=null,curFotoP=null,activeTab='visao';
+let isSyncing=false,pendingSave=false;
+
+// ── FIREBASE SYNC ───────────────────────────────────────────
+function setSyncStatus(s){
+  const dot=document.getElementById('syncDot');
+  const txt=document.getElementById('syncText');
+  if(s==='ok'){dot.className='sync-dot ok';txt.textContent='Sincronizado';}
+  else if(s==='syncing'){dot.className='sync-dot syncing';txt.textContent='A sincronizar...';}
+  else{dot.className='sync-dot';txt.textContent='Sem ligação';}
+}
+
+async function saveToFirebase(){
+  if(isSyncing){pendingSave=true;return;}
+  isSyncing=true;
+  setSyncStatus('syncing');
+  showSyncBar();
+  try{
+    await setDoc(doc(db,STATE_DOC),{data:JSON.stringify(state),ts:Date.now()});
+    setSyncStatus('ok');
+  }catch(e){
+    console.error('Save error',e);
+    setSyncStatus('offline');
+  }
+  isSyncing=false;
+  hideSyncBar();
+  if(pendingSave){pendingSave=false;saveToFirebase();}
+}
+
+function showSyncBar(){const b=document.getElementById('syncBar');b.classList.add('show');}
+function hideSyncBar(){const b=document.getElementById('syncBar');b.classList.remove('show');}
+
+// Listen for real-time changes from the other user
+let isLocalUpdate=false;
+onSnapshot(doc(db,STATE_DOC),(snap)=>{
+  if(isLocalUpdate){isLocalUpdate=false;return;}
+  if(snap.exists()){
+    try{
+      const remote=JSON.parse(snap.data().data);
+      // merge: remote wins unless we're mid-edit
+      state=remote;
+      // ensure structure
+      state.parcelas.forEach(p=>{
+        if(!p.entries)p.entries={};
+        if(!p.fotos)p.fotos=[];
+        CATS.forEach(c=>{if(!p.entries[c.id])p.entries[c.id]=[];});
+      });
+      rebuildTabs();
+      refreshCurrentTab();
+      setSyncStatus('ok');
+    }catch(e){console.error('Parse error',e);}
+  } else {
+    // First time — save default state
+    saveToFirebase();
+  }
+  setSyncStatus('ok');
+},(err)=>{
+  console.error('Snapshot error',err);
+  setSyncStatus('offline');
+});
+
+function save(){
+  isLocalUpdate=true;
+  saveToFirebase();
+}
+
+// ── HELPERS ─────────────────────────────────────────────────
+function uid(){return Date.now().toString(36)+Math.random().toString(36).substr(2,5);}
+function catById(id){return CATS.find(c=>c.id===id)||CATS[CATS.length-1];}
+
+function formatDate(d){
+  if(!d||d==='sem data')return d;
+  try{const[y,m,day]=d.split('-');const ms=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];return `${parseInt(day)} ${ms[parseInt(m)-1]} ${y}`;}catch(e){return d;}
+}
+
+// ── TABS & ROUTING ──────────────────────────────────────────
+function rebuildTabs(){
+  const tabsEl=document.getElementById('mainTabs');
+  const secsEl=document.getElementById('sections');
+  let th=`<button class="tab ${activeTab==='visao'?'active':''}" onclick="showTab('visao',this)">Visão geral</button>`;
+  state.parcelas.forEach((p,i)=>{
+    const nm=p.nome.length>9?p.nome.substring(0,8)+'…':p.nome;
+    th+=`<button class="tab ${activeTab==='p'+i?'active':''}" onclick="showTab('p${i}',this)">${nm}</button>`;
+  });
+  th+=`<button class="tab ${activeTab==='ov'?'active':''}" onclick="showTab('ov',this)">Timeline</button>`;
+  th+=`<button class="tab ${activeTab==='cal'?'active':''}" onclick="showTab('cal',this)">Calendário</button>`;
+  th+=`<button class="tab-add" onclick="openNpModal()" title="Adicionar nova parcela">+ Parcela</button>`;
+  tabsEl.innerHTML=th;
+
+  let sh=`<div class="section ${activeTab==='visao'?'active':''}" id="sec-visao"></div>`;
+  state.parcelas.forEach((_,i)=>{sh+=`<div class="section ${activeTab==='p'+i?'active':''}" id="sec-p${i}"></div>`;});
+  sh+=`<div class="section ${activeTab==='ov'?'active':''}" id="sec-ov"></div>`;
+  sh+=`<div class="section ${activeTab==='cal'?'active':''}" id="sec-cal"></div>`;
+  secsEl.innerHTML=sh;
+}
+
+function refreshCurrentTab(){
+  if(activeTab==='visao')renderVisao();
+  else if(activeTab==='ov')renderOverview();
+  else if(activeTab==='cal')renderCal();
+  else{const idx=parseInt(activeTab.replace('p',''));if(!isNaN(idx))renderParcela(idx);}
+}
+
+window.showTab=function(id,btn){
+  activeTab=id;
+  rebuildTabs();
+  refreshCurrentTab();
+}
+
+// ── VISÃO GERAL ─────────────────────────────────────────────
+function renderVisao(){
+  let totalArv=0,totalArea=0,totalCusto=0,totalAtivas=0;
+  let rows='';
+  state.parcelas.forEach((p,i)=>{
+    const arv=parseInt(p.arvores)||0;
+    const area=parseFloat(p.area)||0;
+    let pc=0;
+    CATS.forEach(c=>{(p.entries[c.id]||[]).forEach(e=>{pc+=parseFloat(e.custo)||0;});});
+    if(!p.porPlantar){totalArv+=arv;totalArea+=area;totalCusto+=pc;totalAtivas++;}
+    const nf=(p.fotos||[]).length;
+    const badge=p.porPlantar?'<span class="badge badge-amber">Por plantar</span>':`<span class="badge badge-green">${arv} árvores</span>`;
+    rows+=`<div class="parcela-row">
+      <div class="parcela-num">${i+1}</div>
+      <div class="parcela-info">
+        <div class="parcela-name-v">${p.nome}</div>
+        <div class="parcela-detail">${p.variedade||'Variedade não definida'}${area?' · '+area.toFixed(2)+' ha':''}${pc?' · '+pc.toFixed(2)+'€':''}${nf?' · '+nf+' foto'+(nf!==1?'s':''):''}</div>
+      </div>
+      ${badge}
+      <button class="go-btn" onclick="showTab('p${i}',null)">Abrir</button>
+    </div>`;
+  });
+  document.getElementById('sec-visao').innerHTML=`
+    <div class="summary-grid">
+      <div class="metric"><div class="metric-label">Árvores</div><div class="metric-value">${totalArv||'—'}</div><div class="metric-sub">nas ativas</div></div>
+      <div class="metric"><div class="metric-label">Área total</div><div class="metric-value">${totalArea?totalArea.toFixed(2):'—'}</div><div class="metric-sub">hectares</div></div>
+      <div class="metric"><div class="metric-label">Parcelas ativas</div><div class="metric-value">${totalAtivas}</div><div class="metric-sub">de ${state.parcelas.length}</div></div>
+      <div class="metric"><div class="metric-label">Custos totais</div><div class="metric-value">${totalCusto?totalCusto.toFixed(0)+'€':'—'}</div><div class="metric-sub">todas as parcelas</div></div>
+    </div>
+    <div class="card"><div class="card-header"><span class="card-title">Parcelas</span></div>${rows}</div>`;
+}
+
+// ── PARCELA ─────────────────────────────────────────────────
+function renderParcela(idx){
+  const p=state.parcelas[idx];if(!p)return;
+  const fotos=p.fotos||[];
+  const fotoGrid=fotos.length===0?'':
+    `<div class="photo-grid">${[...fotos].reverse().map(f=>`
+      <div class="photo-card" onclick="openLightbox('${f._id}',${idx})">
+        <img src="${f.data}" alt="foto">
+        <div class="photo-card-overlay"><div class="photo-card-date">${formatDate(f.data_reg)||''}</div></div>
+        <button class="photo-card-del" onclick="event.stopPropagation();delFoto(${idx},'${f._id}')">×</button>
+      </div>`).join('')}</div>`;
+
+  const fotoCat=`<div class="cat-block">
+    <div class="cat-header" onclick="toggleCat('${p.id}_fotos')">
+      <div class="cat-left"><div class="cat-dot" style="background:#5040b0"></div><span class="cat-name">Registo fotográfico</span><span class="cat-count">${fotos.length} foto${fotos.length!==1?'s':''}</span></div>
+      <div class="cat-right"><span class="cat-chevron ${openCats[p.id+'_fotos']?'open':''}">▼</span></div>
+    </div>
+    <div class="cat-body ${openCats[p.id+'_fotos']?'open':''}">
+      <div class="cat-body-inner">${fotoGrid}<button class="add-entry-btn" onclick="openFotoModal(${idx})">+ Adicionar fotografia</button></div>
+    </div>
+  </div>`;
+
+  const catBlocks=CATS.map(c=>{
+    const entries=p.entries[c.id]||[];
+    const count=entries.length;
+    const total=entries.reduce((s,e)=>s+(parseFloat(e.custo)||0),0);
+    const isOpen=openCats[p.id+'_'+c.id];
+    const entriesHtml=[...entries].reverse().map(e=>{
+      const fitoTags=c.id==='fito'?`<div class="entry-fito">
+        ${e.marca?`<span class="fito-tag">Marca: ${e.marca}</span>`:''}
+        ${e.subst?`<span class="fito-tag">S.A.: ${e.subst}</span>`:''}
+        ${e.qtd?`<span class="fito-tag">Dose: ${e.qtd}</span>`:''}
+        ${e.alvo?`<span class="fito-tag">Alvo: ${e.alvo}</span>`:''}
+      </div>`:'';
+      return `<div class="entry">
+        <div class="entry-header">
+          <div class="entry-date">${e.data||'—'}</div>
+          <div class="entry-content">
+            <div class="entry-proc">${e.proc||'—'}</div>
+            ${fitoTags}
+            ${e.notas?`<div style="font-size:12px;color:var(--text3);margin-top:4px;">${e.notas}</div>`:''}
+          </div>
+          ${e.custo?`<div class="entry-cost">${parseFloat(e.custo).toFixed(2)}€</div>`:''}
+        </div>
+        <div class="entry-actions">
+          <button class="act-btn" onclick="openModal(${idx},'${c.id}','${e._id}')">Editar</button>
+          <button class="act-btn del" onclick="delEntry(${idx},'${c.id}','${e._id}')">Eliminar</button>
+        </div>
+      </div>`;
+    }).join('');
+    return `<div class="cat-block">
+      <div class="cat-header" onclick="toggleCat('${p.id}_${c.id}')">
+        <div class="cat-left"><div class="cat-dot" style="background:${c.dot}"></div><span class="cat-name">${c.label}</span><span class="cat-count">${count} registo${count!==1?'s':''}</span></div>
+        <div class="cat-right">${total>0?`<span class="cat-total">${total.toFixed(2)}€</span>`:''}<span class="cat-chevron ${isOpen?'open':''}">▼</span></div>
+      </div>
+      <div class="cat-body ${isOpen?'open':''}">
+        <div class="cat-body-inner">${entriesHtml}<button class="add-entry-btn" onclick="openModal(${idx},'${c.id}',null)">+ Adicionar registo em ${c.label}</button></div>
+      </div>
+    </div>`;
+  }).join('');
+
+  const canDelete=state.parcelas.length>1;
+  document.getElementById('sec-p'+idx).innerHTML=`
+    <div class="card card-pad" style="margin-bottom:1rem;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:1rem;">
+        <input class="name-edit" value="${p.nome}" onchange="updateNome(${idx},this.value)">
+        ${p.porPlantar?'<span class="badge badge-amber">Por plantar</span>':'<span class="badge badge-green">Ativa</span>'}
+        ${canDelete?`<button class="del-parcela-btn" onclick="deleteParcela(${idx})">Eliminar</button>`:''}
+      </div>
+      <div class="field-grid">
+        <div class="field"><label>Área (ha)</label><input type="number" value="${p.area}" step="0.01" min="0" placeholder="0.00" onchange="updateF(${idx},'area',this.value)"></div>
+        <div class="field"><label>Nº de árvores</label><input type="number" value="${p.arvores}" min="0" placeholder="0" onchange="updateF(${idx},'arvores',this.value)" ${p.porPlantar?'disabled':''}></div>
+        <div class="field"><label>Variedade</label><input type="text" value="${p.variedade}" placeholder="ex: Galega, Cobrançosa" onchange="updateF(${idx},'variedade',this.value)" ${p.porPlantar?'disabled':''}></div>
+        <div class="field"><label>Data de plantação</label><input type="date" value="${p.plantacao}" onchange="updateF(${idx},'plantacao',this.value)" ${p.porPlantar?'disabled':''}></div>
+        <div class="field full-width"><label>Notas gerais</label><textarea placeholder="Solo, exposição, histórico..." onchange="updateF(${idx},'notas',this.value)">${p.notas||''}</textarea></div>
+      </div>
+    </div>
+    <div class="card">${fotoCat}${catBlocks}</div>`;
+}
+
+window.toggleCat=function(key){
+  openCats[key]=!openCats[key];
+  const idx=parseInt(activeTab.replace('p',''));
+  if(!isNaN(idx))renderParcela(idx);
+}
+
+// ── NOVA PARCELA ────────────────────────────────────────────
+window.openNpModal=function(){
+  document.getElementById('npNome').value='';
+  document.getElementById('npArea').value='';
+  document.getElementById('npEstado').value='ativa';
+  document.getElementById('npModalBg').classList.add('open');
+}
+window.closeNpModal=function(){document.getElementById('npModalBg').classList.remove('open');}
+window.criarParcela=function(){
+  const nome=document.getElementById('npNome').value.trim()||'Nova parcela';
+  const area=document.getElementById('npArea').value;
+  const porPlantar=document.getElementById('npEstado').value==='porPlantar';
+  const n=state.parcelas.length+1;
+  const p={...newParcela(n),nome,area,porPlantar};
+  state.parcelas.push(p);
+  save();closeNpModal();
+  const newIdx=state.parcelas.length-1;
+  activeTab='p'+newIdx;
+  rebuildTabs();renderParcela(newIdx);
+}
+window.deleteParcela=function(idx){
+  const p=state.parcelas[idx];
+  if(!confirm(`Eliminar "${p.nome}" e todos os seus dados?\nEsta ação não pode ser desfeita.`))return;
+  state.parcelas.splice(idx,1);
+  save();activeTab='visao';rebuildTabs();renderVisao();
+}
+
+// ── FOTOS ───────────────────────────────────────────────────
+window.openFotoModal=function(idx){
+  curFotoP=idx;fotoB64=null;
+  document.getElementById('fotoModalSub').textContent=state.parcelas[idx].nome;
+  document.getElementById('fotoData').value=new Date().toISOString().split('T')[0];
+  document.getElementById('fotoNota').value='';
+  document.getElementById('fotoPreview').style.display='none';
+  document.getElementById('fotoFileInput').value='';
+  document.getElementById('fotoModalBg').classList.add('open');
+}
+window.closeFotoModal=function(){document.getElementById('fotoModalBg').classList.remove('open');}
+window.onFotoSelected=function(evt){
+  const file=evt.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    const img=new Image();
+    img.onload=function(){
+      const canvas=document.createElement('canvas');const MAX=800;
+      let w=img.width,h=img.height;
+      if(w>MAX){h=Math.round(h*MAX/w);w=MAX;}
+      if(h>MAX){w=Math.round(w*MAX/h);h=MAX;}
+      canvas.width=w;canvas.height=h;
+      canvas.getContext('2d').drawImage(img,0,0,w,h);
+      fotoB64=canvas.toDataURL('image/jpeg',0.75);
+      const prev=document.getElementById('fotoPreview');prev.src=fotoB64;prev.style.display='block';
+    };img.src=e.target.result;
+  };reader.readAsDataURL(file);
+}
+window.saveFoto=function(){
+  if(!fotoB64){alert('Seleciona uma foto primeiro.');return;}
+  const f={_id:uid(),data:fotoB64,data_reg:document.getElementById('fotoData').value,nota:document.getElementById('fotoNota').value};
+  state.parcelas[curFotoP].fotos.push(f);
+  openCats[state.parcelas[curFotoP].id+'_fotos']=true;
+  save();closeFotoModal();renderParcela(curFotoP);
+}
+window.delFoto=function(idx,id){
+  if(!confirm('Eliminar esta foto?'))return;
+  state.parcelas[idx].fotos=state.parcelas[idx].fotos.filter(f=>f._id!==id);
+  save();renderParcela(idx);
+}
+window.openLightbox=function(id,idx){
+  const f=(state.parcelas[idx].fotos||[]).find(x=>x._id===id);if(!f)return;
+  document.getElementById('lbImg').src=f.data;
+  document.getElementById('lbInfo').textContent=(formatDate(f.data_reg)||'')+(f.nota?' — '+f.nota:'');
+  document.getElementById('lightbox').classList.add('open');
+}
+window.closeLightbox=function(){document.getElementById('lightbox').classList.remove('open');}
+
+// ── OPERAÇÕES ───────────────────────────────────────────────
+window.openModal=function(idx,catId,id){
+  curP=idx;curCat=catId;editId=id;
+  const cat=catById(catId);
+  let e=null;
+  if(id)e=(state.parcelas[idx].entries[catId]||[]).find(x=>x._id===id);
+  document.getElementById('mTitle').textContent=id?'Editar registo':'Nova entrada';
+  document.getElementById('mSub').textContent=state.parcelas[idx].nome+' · '+cat.label;
+  document.getElementById('mData').value=e?e.data:new Date().toISOString().split('T')[0];
+  document.getElementById('mProc').value=e?e.proc:'';
+  document.getElementById('mCusto').value=e&&e.custo?e.custo:'';
+  document.getElementById('mNotas').value=e&&e.notas?e.notas:'';
+  const isFito=catId==='fito';
+  document.getElementById('fitoSection').classList.toggle('show',isFito);
+  if(isFito){
+    document.getElementById('mMarca').value=e&&e.marca?e.marca:'';
+    document.getElementById('mSubst').value=e&&e.subst?e.subst:'';
+    document.getElementById('mQtd').value=e&&e.qtd?e.qtd:'';
+    document.getElementById('mAlvo').value=e&&e.alvo?e.alvo:'';
+  }
+  document.getElementById('modalBg').classList.add('open');
+}
+window.closeModal=function(){document.getElementById('modalBg').classList.remove('open');}
+window.saveEntry=function(){
+  if(curP===null||!curCat)return;
+  const e={_id:editId||uid(),data:document.getElementById('mData').value,proc:document.getElementById('mProc').value,custo:document.getElementById('mCusto').value,notas:document.getElementById('mNotas').value};
+  if(curCat==='fito'){e.marca=document.getElementById('mMarca').value;e.subst=document.getElementById('mSubst').value;e.qtd=document.getElementById('mQtd').value;e.alvo=document.getElementById('mAlvo').value;}
+  const arr=state.parcelas[curP].entries[curCat];
+  if(editId){const i=arr.findIndex(x=>x._id===editId);if(i>=0)arr[i]=e;}
+  else arr.push(e);
+  openCats[state.parcelas[curP].id+'_'+curCat]=true;
+  save();closeModal();renderParcela(curP);
+}
+window.delEntry=function(idx,catId,id){
+  if(!confirm('Eliminar este registo?'))return;
+  state.parcelas[idx].entries[catId]=state.parcelas[idx].entries[catId].filter(e=>e._id!==id);
+  save();renderParcela(idx);
+}
+window.updateNome=function(idx,v){state.parcelas[idx].nome=v.trim()||('Parcela '+(idx+1));save();rebuildTabs();renderParcela(idx);}
+window.updateF=function(idx,k,v){state.parcelas[idx][k]=v;save();}
+
+// ── TIMELINE ────────────────────────────────────────────────
+function renderOverview(){
+  let all=[];
+  state.parcelas.forEach((p,i)=>{
+    CATS.forEach(c=>{(p.entries[c.id]||[]).forEach(e=>{all.push({...e,parcelaIdx:i,parcelaNome:p.nome,catId:c.id,tipo:'entry'});});});
+    (p.fotos||[]).forEach(f=>{all.push({_id:f._id,data:f.data_reg,proc:f.nota||'Fotografia',parcelaIdx:i,parcelaNome:p.nome,catId:'_foto',tipo:'foto',imgData:f.data});});
+  });
+  let filtered=all;
+  if(ovParFilter!=='all')filtered=filtered.filter(e=>e.parcelaIdx===parseInt(ovParFilter));
+  if(ovCatFilter!=='all')filtered=filtered.filter(e=>e.catId===ovCatFilter);
+  filtered.sort((a,b)=>(b.data||'').localeCompare(a.data||''));
+  const byDate={};
+  filtered.forEach(e=>{const d=e.data||'sem data';if(!byDate[d])byDate[d]=[];byDate[d].push(e);});
+  const dates=Object.keys(byDate).sort((a,b)=>b.localeCompare(a));
+  const totalVis=filtered.reduce((s,e)=>s+(parseFloat(e.custo)||0),0);
+
+  const parFilters=`<div class="ov-filters">
+    <button class="ov-filter ${ovParFilter==='all'?'active':''}" onclick="setOvPar('all')">Todas</button>
+    ${state.parcelas.map((p,i)=>`<button class="ov-filter ${ovParFilter===String(i)?'active':''}" onclick="setOvPar('${i}')">${p.nome}</button>`).join('')}
+  </div>`;
+  const catFilters=`<div class="ov-filters" style="border-top:none;padding-top:0;">
+    <button class="ov-filter ${ovCatFilter==='all'?'active':''}" onclick="setOvCat('all')">Todas as categorias</button>
+    ${CATS.map(c=>`<button class="ov-filter ${ovCatFilter===c.id?'active':''}" onclick="setOvCat('${c.id}')">${c.label}</button>`).join('')}
+    <button class="ov-filter ${ovCatFilter==='_foto'?'active':''}" onclick="setOvCat('_foto')">Fotos</button>
+  </div>`;
+
+  const timeline=dates.length===0?'<div class="ov-empty">Sem registos ainda.</div>':
+    dates.map(d=>`<div class="ov-day">
+      <div class="ov-day-header"><div class="ov-day-line"></div><div class="ov-day-date">${formatDate(d)||d}</div><div class="ov-day-line"></div></div>
+      ${byDate[d].map(e=>{
+        if(e.tipo==='foto')return `<div class="ov-item"><img src="${e.imgData}" class="ov-thumb" onclick="openLightbox('${e._id}',${e.parcelaIdx})"><div class="ov-item-body"><div class="ov-item-top"><span class="ov-parcela">${e.parcelaNome}</span><span class="ov-cat" style="background:#eceaff;color:#4a40b0">Fotografia</span></div><div class="ov-proc">${e.proc}</div></div></div>`;
+        const cat=catById(e.catId);
+        return `<div class="ov-item"><div class="ov-dot" style="background:${cat.dot}"></div><div class="ov-item-body"><div class="ov-item-top"><span class="ov-parcela">${e.parcelaNome}</span><span class="ov-cat" style="background:${cat.bg};color:${cat.tc}">${cat.label}</span></div><div class="ov-proc">${e.proc||'—'}</div>${e.notas?`<div style="font-size:12px;color:var(--text3);margin-top:2px;">${e.notas}</div>`:''}</div>${e.custo?`<div class="ov-cost">${parseFloat(e.custo).toFixed(2)}€</div>`:''}</div>`;
+      }).join('')}
+    </div>`).join('');
+
+  document.getElementById('sec-ov').innerHTML=`
+    <div class="card">
+      <div class="card-header"><span class="card-title">Timeline de operações</span>${totalVis>0?`<span style="font-size:13px;font-weight:600;color:var(--text2);">${totalVis.toFixed(2)}€</span>`:''}</div>
+      ${parFilters}${catFilters}
+      <div class="ov-timeline">${timeline}</div>
+    </div>`;
+}
+
+window.setOvPar=function(v){ovParFilter=v;renderOverview();}
+window.setOvCat=function(v){ovCatFilter=v;renderOverview();}
+
+// ── CALENDÁRIO ──────────────────────────────────────────────
+function renderCal(){
+  document.getElementById('sec-cal').innerHTML=`
+    <div class="card card-pad">
+      <div style="margin-bottom:1rem;font-size:14px;font-weight:600;">Calendário agronómico — oliveiras (Portugal)</div>
+      <div class="legend">
+        <div class="leg-item"><div class="leg-dot t-poda"></div>Poda</div>
+        <div class="leg-item"><div class="leg-dot t-fert"></div>Fertilização</div>
+        <div class="leg-item"><div class="leg-dot t-rega"></div>Rega</div>
+        <div class="leg-item"><div class="leg-dot t-trat"></div>Tratamentos</div>
+        <div class="leg-item"><div class="leg-dot t-col"></div>Colheita</div>
+      </div>
+      <div class="cal-grid">${CAL.map(m=>`<div class="cal-month"><div class="cal-month-name">${m.m}</div><div class="cal-tasks">${m.tasks.map(t=>`<div class="cal-task ${t.c}">${t.t}</div>`).join('')}</div></div>`).join('')}</div>
+      <p style="font-size:12px;color:var(--text3);margin-top:.5rem;">Recomendações gerais para Portugal. Adapta conforme variedade e condições locais.</p>
+    </div>`;
+}
+
+// ── INIT ────────────────────────────────────────────────────
+rebuildTabs();
+renderVisao();
+</script>
+</body>
+</html>
