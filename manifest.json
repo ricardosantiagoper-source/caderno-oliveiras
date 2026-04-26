@@ -2,20 +2,21 @@
   "name": "Caderno de Oliveiras",
   "short_name": "Oliveiras",
   "description": "Caderno de campo para gestão de parcelas de oliveiras",
-  "start_url": "/",
+  "start_url": "/caderno-oliveiras/index.html",
+  "scope": "/caderno-oliveiras/",
   "display": "standalone",
   "background_color": "#f5f4f0",
   "theme_color": "#1a1a18",
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "icon-192.png",
+      "src": "https://ricardosantiagoper-source.github.io/caderno-oliveiras/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "icon-512.png",
+      "src": "https://ricardosantiagoper-source.github.io/caderno-oliveiras/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
