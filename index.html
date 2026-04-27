@@ -1390,16 +1390,23 @@ function renderMapa(){
   // Inicializar mapa
   setTimeout(()=>{
     if(mapaInstance){mapaInstance.remove();mapaInstance=null;}
-    // Centro por defeito — Portugal
+    // Centro por defeito — Ouronó, Portugal
     const centro=comCoords.length>0
       ?[parseFloat(comCoords[0].lat),parseFloat(comCoords[0].lng)]
-      :[39.5, -8.0];
-    const zoom=comCoords.length>0?14:7;
+      :[38.9215, -8.1732];
+    const zoom=comCoords.length>0?14:13;
 
     mapaInstance=L.map('mapaLeaflet').setView(centro,zoom);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+
+    const satelite=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{
+      attribution:'© Esri, Maxar, Earthstar Geographics',maxZoom:19
+    });
+    const normal=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
       attribution:'© OpenStreetMap',maxZoom:19
-    }).addTo(mapaInstance);
+    });
+
+    satelite.addTo(mapaInstance);
+    L.control.layers({'🛰 Satélite':satelite,'🗺 Mapa':normal},{},{position:'topright'}).addTo(mapaInstance);
 
     // Adicionar marcadores
     mapaMarkers=[];
