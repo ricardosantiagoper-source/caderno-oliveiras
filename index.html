@@ -1390,11 +1390,11 @@ function renderMapa(){
   // Inicializar mapa
   setTimeout(()=>{
     if(mapaInstance){mapaInstance.remove();mapaInstance=null;}
-    // Centro por defeito — Ouronó, Portugal
+    // Centro por defeito — Ourondo, Casegas e Ourondo, Covilhã
     const centro=comCoords.length>0
       ?[parseFloat(comCoords[0].lat),parseFloat(comCoords[0].lng)]
-      :[38.9215, -8.1732];
-    const zoom=comCoords.length>0?14:13;
+      :[40.1473, -7.6819];
+    const zoom=comCoords.length>0?14:14;
 
     mapaInstance=L.map('mapaLeaflet').setView(centro,zoom);
 
