@@ -188,6 +188,34 @@
     .sync-dot.syncing{background:#e0a020;animation:pulse 1s infinite;}
     @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
 
+    /* Colheita */
+    .colheita-card{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:8px;overflow:hidden;}
+    .colheita-card:last-of-type{margin-bottom:12px;}
+    .colheita-header{display:flex;align-items:flex-start;gap:10px;padding:11px 13px;}
+    .colheita-year{font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;flex-shrink:0;min-width:40px;}
+    .colheita-body{flex:1;}
+    .colheita-stats{display:flex;gap:12px;flex-wrap:wrap;margin-top:4px;}
+    .colheita-stat{display:flex;flex-direction:column;gap:1px;}
+    .colheita-stat-label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.3px;}
+    .colheita-stat-val{font-size:13px;font-weight:600;color:var(--text);}
+    .colheita-rend{font-size:11px;padding:2px 8px;border-radius:10px;background:#eceaff;color:#4a40b0;font-weight:500;align-self:flex-start;margin-top:2px;}
+    .colheita-lagar{font-size:12px;color:var(--text2);margin-top:3px;}
+    .colheita-notas{font-size:12px;color:var(--text3);margin-top:3px;font-style:italic;}
+    .colheita-cost{font-size:13px;font-weight:600;color:var(--text2);white-space:nowrap;flex-shrink:0;}
+    /* Histórico colheitas */
+    .hist-header{display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:8px;padding:8px 14px;border-bottom:1px solid var(--border);background:var(--bg2);}
+    .hist-col-label{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.3px;}
+    .hist-row{display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:8px;padding:9px 14px;border-bottom:1px solid var(--border);align-items:center;}
+    .hist-row:last-child{border-bottom:none;}
+    .hist-row:hover{background:var(--bg2);}
+    .hist-val{font-size:13px;color:var(--text);}
+    .hist-val.bold{font-weight:600;}
+    .hist-rend{font-size:11px;padding:2px 7px;border-radius:10px;background:#eceaff;color:#4a40b0;font-weight:500;display:inline-block;}
+    .totais-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:12px 14px;border-top:1px solid var(--border);background:var(--bg2);}
+    .totais-item{display:flex;flex-direction:column;gap:2px;}
+    .totais-label{font-size:11px;color:var(--text3);}
+    .totais-val{font-size:16px;font-weight:700;color:var(--text);}
+
     @media(max-width:480px){
       .summary-grid{grid-template-columns:repeat(2,1fr);}
       .cal-grid{grid-template-columns:repeat(3,1fr);}
@@ -271,6 +299,24 @@
   </div>
 </div>
 
+<!-- Modal colheita -->
+<div class="modal-bg" id="colheitaModalBg">
+  <div class="modal">
+    <h3 id="cTitle">Registar colheita</h3>
+    <div class="modal-sub" id="cSub"></div>
+    <div class="mfield"><label>Data de colheita</label><input type="date" id="cData"></div>
+    <div class="mfield"><label>Quantidade de azeitona (kg)</label><input type="number" id="cKg" placeholder="ex: 1200" min="0" step="0.1"></div>
+    <div class="mfield"><label>Litros de azeite produzidos</label><input type="number" id="cLitros" placeholder="ex: 180" min="0" step="0.1"></div>
+    <div class="mfield"><label>Lagar</label><input type="text" id="cLagar" placeholder="ex: Lagar da Cooperativa de Avis"></div>
+    <div class="mfield"><label>Custo da colheita (€) — opcional</label><input type="number" id="cCusto" placeholder="0.00" min="0" step="0.01"></div>
+    <div class="mfield"><label>Notas — opcional</label><textarea id="cNotas" placeholder="Condições, qualidade do azeite, observações..." style="min-height:60px;"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeColheitaModal()">Cancelar</button>
+      <button class="btn-save" onclick="saveColheita()">Guardar colheita</button>
+    </div>
+  </div>
+</div>
+
 <!-- Lightbox -->
 <div class="lightbox" id="lightbox" onclick="closeLightbox()">
   <button class="lightbox-close" onclick="closeLightbox()">×</button>
@@ -326,7 +372,7 @@ const CAL=[
 // ── STATE ───────────────────────────────────────────────────
 function newParcela(n){
   const en={};CATS.forEach(c=>{en[c.id]=[];});
-  return {id:uid(),n,nome:'Parcela '+n,area:'',arvores:'',variedade:'',plantacao:'',notas:'',entries:en,fotos:[],porPlantar:false};
+  return {id:uid(),n,nome:'Parcela '+n,area:'',arvores:'',variedade:'',plantacao:'',notas:'',entries:en,fotos:[],colheitas:[],porPlantar:false};
 }
 function defState(){
   return {parcelas:[
@@ -384,6 +430,7 @@ onSnapshot(doc(db,STATE_DOC),(snap)=>{
       state.parcelas.forEach(p=>{
         if(!p.entries)p.entries={};
         if(!p.fotos)p.fotos=[];
+        if(!p.colheitas)p.colheitas=[];
         CATS.forEach(c=>{if(!p.entries[c.id])p.entries[c.id]=[];});
       });
       rebuildTabs();
@@ -424,6 +471,7 @@ function rebuildTabs(){
     th+=`<button class="tab ${activeTab==='p'+i?'active':''}" onclick="showTab('p${i}',this)">${nm}</button>`;
   });
   th+=`<button class="tab ${activeTab==='ov'?'active':''}" onclick="showTab('ov',this)">Timeline</button>`;
+  th+=`<button class="tab ${activeTab==='colheitas'?'active':''}" onclick="showTab('colheitas',this)">🫒 Colheitas</button>`;
   th+=`<button class="tab ${activeTab==='cal'?'active':''}" onclick="showTab('cal',this)">Calendário</button>`;
   th+=`<button class="tab-add" onclick="openNpModal()" title="Adicionar nova parcela">+ Parcela</button>`;
   tabsEl.innerHTML=th;
@@ -431,6 +479,7 @@ function rebuildTabs(){
   let sh=`<div class="section ${activeTab==='visao'?'active':''}" id="sec-visao"></div>`;
   state.parcelas.forEach((_,i)=>{sh+=`<div class="section ${activeTab==='p'+i?'active':''}" id="sec-p${i}"></div>`;});
   sh+=`<div class="section ${activeTab==='ov'?'active':''}" id="sec-ov"></div>`;
+  sh+=`<div class="section ${activeTab==='colheitas'?'active':''}" id="sec-colheitas"></div>`;
   sh+=`<div class="section ${activeTab==='cal'?'active':''}" id="sec-cal"></div>`;
   secsEl.innerHTML=sh;
 }
@@ -438,6 +487,7 @@ function rebuildTabs(){
 function refreshCurrentTab(){
   if(activeTab==='visao')renderVisao();
   else if(activeTab==='ov')renderOverview();
+  else if(activeTab==='colheitas')renderColheitas();
   else if(activeTab==='cal')renderCal();
   else{const idx=parseInt(activeTab.replace('p',''));if(!isNaN(idx))renderParcela(idx);}
 }
@@ -542,6 +592,48 @@ function renderParcela(idx){
   }).join('');
 
   const canDelete=state.parcelas.length>1;
+  const colheitas=p.colheitas||[];
+  const colheitasHtml=colheitas.length===0?'':
+    [...colheitas].reverse().map(c=>{
+      const rend=(c.kg&&c.litros)?(parseFloat(c.kg)/parseFloat(c.litros)).toFixed(2):null;
+      return `<div class="colheita-card">
+        <div class="colheita-header">
+          <div class="colheita-year">${c.data?c.data.split('-')[0]:'—'}</div>
+          <div class="colheita-body">
+            <div class="colheita-stats">
+              ${c.kg?`<div class="colheita-stat"><div class="colheita-stat-label">Azeitona</div><div class="colheita-stat-val">${parseFloat(c.kg).toFixed(0)} kg</div></div>`:''}
+              ${c.litros?`<div class="colheita-stat"><div class="colheita-stat-label">Azeite</div><div class="colheita-stat-val">${parseFloat(c.litros).toFixed(1)} L</div></div>`:''}
+              ${rend?`<div class="colheita-rend">${rend} kg/L</div>`:''}
+            </div>
+            ${c.lagar?`<div class="colheita-lagar">🏭 ${c.lagar}</div>`:''}
+            ${c.notas?`<div class="colheita-notas">${c.notas}</div>`:''}
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
+            ${c.custo?`<div class="colheita-cost">${parseFloat(c.custo).toFixed(2)}€</div>`:''}
+            <div style="display:flex;gap:5px;">
+              <button class="act-btn" onclick="openColheitaModal(${idx},'${c._id}')">Editar</button>
+              <button class="act-btn del" onclick="delColheita(${idx},'${c._id}')">Eliminar</button>
+            </div>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+
+  const colheitaCat=`<div class="cat-block">
+    <div class="cat-header" onclick="toggleCat('${p.id}_colheita')">
+      <div class="cat-left"><div class="cat-dot" style="background:#4a7a28"></div><span class="cat-name">Colheita</span><span class="cat-count">${colheitas.length} registo${colheitas.length!==1?'s':''}</span></div>
+      <div class="cat-right">
+        ${colheitas.length?`<span class="cat-total">${colheitas.reduce((s,c)=>s+(parseFloat(c.litros)||0),0).toFixed(0)} L total</span>`:''}
+        <span class="cat-chevron ${openCats[p.id+'_colheita']?'open':''}">▼</span>
+      </div>
+    </div>
+    <div class="cat-body ${openCats[p.id+'_colheita']?'open':''}">
+      <div class="cat-body-inner">
+        ${colheitasHtml}
+        <button class="add-entry-btn" onclick="openColheitaModal(${idx},null)">+ Registar colheita</button>
+      </div>
+    </div>
+  </div>`;
   document.getElementById('sec-p'+idx).innerHTML=`
     <div class="card card-pad" style="margin-bottom:1rem;">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:1rem;">
@@ -557,7 +649,7 @@ function renderParcela(idx){
         <div class="field full-width"><label>Notas gerais</label><textarea placeholder="Solo, exposição, histórico..." onchange="updateF(${idx},'notas',this.value)">${p.notas||''}</textarea></div>
       </div>
     </div>
-    <div class="card">${fotoCat}${catBlocks}</div>`;
+    <div class="card">${colheitaCat}${fotoCat}${catBlocks}</div>`;
 }
 
 window.toggleCat=function(key){
@@ -744,6 +836,141 @@ function renderCal(){
       <div class="cal-grid">${CAL.map(m=>`<div class="cal-month"><div class="cal-month-name">${m.m}</div><div class="cal-tasks">${m.tasks.map(t=>`<div class="cal-task ${t.c}">${t.t}</div>`).join('')}</div></div>`).join('')}</div>
       <p style="font-size:12px;color:var(--text3);margin-top:.5rem;">Recomendações gerais para Portugal. Adapta conforme variedade e condições locais.</p>
     </div>`;
+}
+
+// ── COLHEITAS ────────────────────────────────────────────────
+let curColheitaP=null, editColheitaId=null;
+
+window.openColheitaModal=function(idx,id){
+  curColheitaP=idx; editColheitaId=id;
+  const p=state.parcelas[idx];
+  let c=null;
+  if(id) c=(p.colheitas||[]).find(x=>x._id===id);
+  document.getElementById('cTitle').textContent=id?'Editar colheita':'Registar colheita';
+  document.getElementById('cSub').textContent=p.nome;
+  document.getElementById('cData').value=c?c.data:new Date().toISOString().split('T')[0];
+  document.getElementById('cKg').value=c&&c.kg?c.kg:'';
+  document.getElementById('cLitros').value=c&&c.litros?c.litros:'';
+  document.getElementById('cLagar').value=c&&c.lagar?c.lagar:'';
+  document.getElementById('cCusto').value=c&&c.custo?c.custo:'';
+  document.getElementById('cNotas').value=c&&c.notas?c.notas:'';
+  document.getElementById('colheitaModalBg').classList.add('open');
+}
+window.closeColheitaModal=function(){document.getElementById('colheitaModalBg').classList.remove('open');}
+window.saveColheita=function(){
+  if(curColheitaP===null)return;
+  const c={
+    _id:editColheitaId||uid(),
+    data:document.getElementById('cData').value,
+    kg:document.getElementById('cKg').value,
+    litros:document.getElementById('cLitros').value,
+    lagar:document.getElementById('cLagar').value,
+    custo:document.getElementById('cCusto').value,
+    notas:document.getElementById('cNotas').value,
+  };
+  if(!state.parcelas[curColheitaP].colheitas) state.parcelas[curColheitaP].colheitas=[];
+  const arr=state.parcelas[curColheitaP].colheitas;
+  if(editColheitaId){const i=arr.findIndex(x=>x._id===editColheitaId);if(i>=0)arr[i]=c;}
+  else arr.push(c);
+  openCats[state.parcelas[curColheitaP].id+'_colheita']=true;
+  save(); closeColheitaModal(); renderParcela(curColheitaP);
+}
+window.delColheita=function(idx,id){
+  if(!confirm('Eliminar este registo de colheita?'))return;
+  state.parcelas[idx].colheitas=state.parcelas[idx].colheitas.filter(c=>c._id!==id);
+  save(); renderParcela(idx);
+}
+
+function renderColheitas(){
+  // Agrupa todas as colheitas de todas as parcelas por ano
+  let todasColheitas=[];
+  state.parcelas.forEach((p,i)=>{
+    (p.colheitas||[]).forEach(c=>{
+      todasColheitas.push({...c, parcelaNome:p.nome, parcelaIdx:i});
+    });
+  });
+  todasColheitas.sort((a,b)=>(b.data||'').localeCompare(a.data||''));
+
+  // Totais globais
+  const totalKg=todasColheitas.reduce((s,c)=>s+(parseFloat(c.kg)||0),0);
+  const totalL=todasColheitas.reduce((s,c)=>s+(parseFloat(c.litros)||0),0);
+  const totalCusto=todasColheitas.reduce((s,c)=>s+(parseFloat(c.custo)||0),0);
+  const rendGlobal=totalKg&&totalL?(totalKg/totalL).toFixed(2):null;
+
+  // Por parcela
+  const porParcela=state.parcelas.map((p,i)=>{
+    const cols=p.colheitas||[];
+    const kg=cols.reduce((s,c)=>s+(parseFloat(c.kg)||0),0);
+    const l=cols.reduce((s,c)=>s+(parseFloat(c.litros)||0),0);
+    const custo=cols.reduce((s,c)=>s+(parseFloat(c.custo)||0),0);
+    const rend=kg&&l?(kg/l).toFixed(2):null;
+    return {p,i,cols,kg,l,custo,rend};
+  }).filter(x=>x.cols.length>0);
+
+  const emptyMsg='<div style="font-size:13px;color:var(--text3);text-align:center;padding:2rem 0;">Sem colheitas registadas ainda.<br>Adiciona a primeira colheita dentro de cada parcela.</div>';
+
+  const historicoRows=todasColheitas.length===0?emptyMsg:
+    `<div class="hist-header">
+      <div class="hist-col-label">Parcela</div>
+      <div class="hist-col-label">Data</div>
+      <div class="hist-col-label">Azeitona</div>
+      <div class="hist-col-label">Azeite</div>
+      <div class="hist-col-label">Rendimento</div>
+    </div>
+    ${todasColheitas.map(c=>{
+      const rend=(c.kg&&c.litros)?(parseFloat(c.kg)/parseFloat(c.litros)).toFixed(2):null;
+      return `<div class="hist-row">
+        <div class="hist-val bold">${c.parcelaNome}</div>
+        <div class="hist-val">${formatDate(c.data)||'—'}</div>
+        <div class="hist-val">${c.kg?parseFloat(c.kg).toFixed(0)+' kg':'—'}</div>
+        <div class="hist-val">${c.litros?parseFloat(c.litros).toFixed(1)+' L':'—'}</div>
+        <div class="hist-val">${rend?`<span class="hist-rend">${rend} kg/L</span>`:'—'}</div>
+      </div>`;
+    }).join('')}
+    <div class="totais-grid">
+      <div class="totais-item"><div class="totais-label">Total azeitona</div><div class="totais-val">${totalKg.toFixed(0)} kg</div></div>
+      <div class="totais-item"><div class="totais-label">Total azeite</div><div class="totais-val">${totalL.toFixed(1)} L</div></div>
+      <div class="totais-item"><div class="totais-label">Rendimento médio</div><div class="totais-val">${rendGlobal?rendGlobal+' kg/L':'—'}</div></div>
+    </div>`;
+
+  const porParcelaHtml=porParcela.length===0?'':porParcela.map(({p,i,cols,kg,l,custo,rend})=>`
+    <div class="card" style="margin-bottom:1rem;">
+      <div class="card-header">
+        <span class="card-title">${p.nome}</span>
+        <button class="go-btn" onclick="openColheitaModal(${i},null)">+ Colheita</button>
+      </div>
+      ${cols.sort((a,b)=>(b.data||'').localeCompare(a.data||'')).map(c=>{
+        const r=(c.kg&&c.litros)?(parseFloat(c.kg)/parseFloat(c.litros)).toFixed(2):null;
+        return `<div class="hist-row" style="grid-template-columns:1fr 1fr 1fr 1fr auto;">
+          <div class="hist-val">${c.data?c.data.split('-')[0]:'—'}</div>
+          <div class="hist-val">${c.kg?parseFloat(c.kg).toFixed(0)+' kg':'—'}</div>
+          <div class="hist-val">${c.litros?parseFloat(c.litros).toFixed(1)+' L':'—'}</div>
+          <div class="hist-val">${r?`<span class="hist-rend">${r} kg/L</span>`:'—'}</div>
+          <div style="display:flex;gap:4px;">
+            <button class="act-btn" onclick="openColheitaModal(${i},'${c._id}')">✏️</button>
+            <button class="act-btn del" onclick="delColheita(${i},'${c._id}')">×</button>
+          </div>
+        </div>`;
+      }).join('')}
+      <div class="totais-grid" style="grid-template-columns:repeat(${custo?4:3},1fr);">
+        <div class="totais-item"><div class="totais-label">Total azeitona</div><div class="totais-val">${kg.toFixed(0)} kg</div></div>
+        <div class="totais-item"><div class="totais-label">Total azeite</div><div class="totais-val">${l.toFixed(1)} L</div></div>
+        <div class="totais-item"><div class="totais-label">Rendimento médio</div><div class="totais-val">${rend?rend+' kg/L':'—'}</div></div>
+        ${custo?`<div class="totais-item"><div class="totais-label">Custo total</div><div class="totais-val">${custo.toFixed(2)}€</div></div>`:''}
+      </div>
+    </div>`).join('');
+
+  document.getElementById('sec-colheitas').innerHTML=`
+    <div class="summary-grid" style="grid-template-columns:repeat(3,1fr);">
+      <div class="metric"><div class="metric-label">Total azeitona</div><div class="metric-value">${totalKg?totalKg.toFixed(0):'—'}</div><div class="metric-sub">kg colhidos</div></div>
+      <div class="metric"><div class="metric-label">Total azeite</div><div class="metric-value">${totalL?totalL.toFixed(1):'—'}</div><div class="metric-sub">litros produzidos</div></div>
+      <div class="metric"><div class="metric-label">Rendimento médio</div><div class="metric-value">${rendGlobal||'—'}</div><div class="metric-sub">kg azeitona / litro</div></div>
+    </div>
+    <div class="card" style="margin-bottom:1rem;">
+      <div class="card-header"><span class="card-title">Histórico completo</span></div>
+      ${historicoRows}
+    </div>
+    ${porParcelaHtml}`;
 }
 
 // ── INIT ────────────────────────────────────────────────────
