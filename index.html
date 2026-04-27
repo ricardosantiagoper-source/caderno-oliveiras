@@ -11,9 +11,11 @@
   <style>
     *{box-sizing:border-box;margin:0;padding:0;}
     :root{
-      --bg:#ffffff;--bg2:#f5f4f0;--bg3:#eceae3;
-      --border:#e0ddd5;--border2:#d0cdc5;
-      --text:#1a1a18;--text2:#5a5a55;--text3:#9a9a95;
+      --bg:#faf8f4;--bg2:#f0ece3;--bg3:#e4ddd0;
+      --border:#d4cdc0;--border2:#c0b8a8;
+      --text:#2a2118;--text2:#5c5040;--text3:#9a8e7e;
+      --green:#3b6d11;--green2:#5a9020;--green3:#e8f5d8;
+      --earth:#7a5c2e;--earth2:#f5ede0;
       --radius:10px;--radius-sm:6px;
       --font:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
     }
@@ -23,16 +25,16 @@
     /* Tabs */
     .tabs-wrap{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1.25rem;align-items:center;}
     .tab{padding:7px 13px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg);cursor:pointer;font-size:13px;color:var(--text2);transition:all 0.15s;font-family:var(--font);}
-    .tab.active{background:var(--text);color:#fff;border-color:var(--text);}
-    .tab:hover:not(.active){background:var(--bg3);}
+    .tab.active{background:var(--green);color:#fff;border-color:var(--green);}
+    .tab:hover:not(.active){background:var(--green3);color:var(--green);}
     .tab-add{padding:7px 11px;border-radius:var(--radius-sm);border:1px dashed var(--border2);background:transparent;cursor:pointer;font-size:13px;color:var(--text3);font-family:var(--font);}
-    .tab-add:hover{color:var(--text);border-color:var(--text2);background:var(--bg);}
+    .tab-add:hover{color:var(--green);border-color:var(--green);background:var(--green3);}
     .section{display:none;}.section.active{display:block;}
 
     /* Cards */
     .card{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:1rem;overflow:hidden;}
     .card-pad{padding:1rem 1.125rem;}
-    .card-header{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-bottom:1px solid var(--border);}
+    .card-header{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-bottom:1px solid var(--border);background:var(--bg);}
     .card-title{font-size:14px;font-weight:600;color:var(--text);}
 
     /* Fields */
@@ -40,22 +42,22 @@
     .field{display:flex;flex-direction:column;gap:4px;}
     .field label{font-size:11px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;}
     .field input,.field textarea,.field select{font-size:13px;padding:7px 9px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg2);color:var(--text);width:100%;font-family:var(--font);}
-    .field input:focus,.field textarea:focus{outline:none;border-color:var(--text2);background:var(--bg);}
+    .field input:focus,.field textarea:focus{outline:none;border-color:var(--green2);background:var(--bg);}
     .field textarea{resize:vertical;min-height:60px;}
     .full-width{grid-column:1/-1;}
     .name-edit{background:none;border:none;border-bottom:1px dashed var(--border2);font-size:15px;font-weight:600;color:var(--text);padding:0 0 2px;flex:1;font-family:var(--font);}
-    .name-edit:focus{outline:none;border-bottom-color:var(--text2);}
+    .name-edit:focus{outline:none;border-bottom-color:var(--green);}
 
     /* Badge */
     .badge{font-size:11px;padding:3px 9px;border-radius:20px;font-weight:500;}
-    .badge-green{background:#e8f5d8;color:#3a6b10;}
+    .badge-green{background:var(--green3);color:var(--green);}
     .badge-amber{background:#fde8c8;color:#8a4f0a;}
 
     /* Summary */
     .summary-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:1rem;}
-    .metric{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px;}
+    .metric{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px;border-left:3px solid var(--green2);}
     .metric-label{font-size:11px;color:var(--text3);margin-bottom:3px;font-weight:500;}
-    .metric-value{font-size:22px;font-weight:600;color:var(--text);}
+    .metric-value{font-size:22px;font-weight:600;color:var(--green);}
     .metric-sub{font-size:11px;color:var(--text3);margin-top:1px;}
 
     /* Parcela row */
@@ -117,7 +119,7 @@
     /* Timeline */
     .ov-filters{display:flex;gap:6px;flex-wrap:wrap;padding:10px 14px;border-bottom:1px solid var(--border);background:var(--bg2);}
     .ov-filter{font-size:12px;padding:4px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:transparent;cursor:pointer;color:var(--text2);font-family:var(--font);}
-    .ov-filter.active{background:var(--text);color:#fff;border-color:var(--text);}
+    .ov-filter.active{background:var(--green);color:#fff;border-color:var(--green);}
     .ov-timeline{padding:14px;}
     .ov-day{margin-bottom:18px;}
     .ov-day-header{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
@@ -161,8 +163,8 @@
     .mfield textarea{resize:vertical;min-height:80px;}
     .modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:1rem;}
     .btn-cancel{font-size:13px;padding:7px 14px;border-radius:var(--radius-sm);border:1px solid var(--border);background:transparent;color:var(--text2);cursor:pointer;font-family:var(--font);}
-    .btn-save{font-size:13px;padding:7px 16px;border-radius:var(--radius-sm);background:var(--text);color:#fff;border:none;cursor:pointer;font-weight:500;font-family:var(--font);}
-    .btn-save:hover{opacity:.85;}
+    .btn-save{font-size:13px;padding:7px 16px;border-radius:var(--radius-sm);background:var(--green);color:#fff;border:none;cursor:pointer;font-weight:500;font-family:var(--font);}
+    .btn-save:hover{background:var(--green2);}
     .fito-section{display:none;border-top:1px solid var(--border);margin-top:6px;padding-top:10px;}
     .fito-section.show{display:block;}
     .foto-preview{width:100%;max-height:180px;object-fit:cover;border-radius:var(--radius-sm);margin-bottom:8px;display:none;}
@@ -274,7 +276,25 @@
 <body>
 <div class="app">
   <div class="app-header">
-    <div class="app-title">🫒 Oliveiras <span>caderno de campo</span></div>
+    <div class="app-title">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:36px;height:36px;background:#2d5016;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <svg width="24" height="24" viewBox="0 0 130 130" xmlns="http://www.w3.org/2000/svg">
+            <ellipse cx="52" cy="62" rx="22" ry="32" fill="#7ab648" transform="rotate(-15 52 62)"/>
+            <ellipse cx="52" cy="62" rx="10" ry="20" fill="#5a9020" transform="rotate(-15 52 62)"/>
+            <ellipse cx="80" cy="55" rx="17" ry="26" fill="#9fd45a" transform="rotate(12 80 55)"/>
+            <ellipse cx="80" cy="55" rx="8" ry="16" fill="#7ab648" transform="rotate(12 80 55)"/>
+            <path d="M52 30 Q60 10 75 20 Q85 5 90 25 Q100 18 95 35" stroke="#3b6d11" stroke-width="3" fill="none" stroke-linecap="round"/>
+            <circle cx="48" cy="68" r="7" fill="#2d1a0e"/>
+            <circle cx="79" cy="60" r="6" fill="#2d1a0e"/>
+          </svg>
+        </div>
+        <div>
+          <div style="font-size:16px;font-weight:700;color:var(--text);line-height:1.2;">Caderno de Oliveiras</div>
+          <div style="font-size:11px;color:var(--text3);">Ourondo · Covilhã</div>
+        </div>
+      </div>
+    </div>
     <div class="sync-status" id="syncStatus">
       <div class="sync-dot" id="syncDot"></div>
       <span id="syncText">A ligar...</span>
@@ -555,7 +575,7 @@ function rebuildTabs(){
   th+=`<button class="tab ${activeTab==='relatorios'?'active':''}" onclick="showTab('relatorios',this)">📊 Relatórios</button>`;
   th+=`<button class="tab ${activeTab==='mapa'?'active':''}" onclick="showTab('mapa',this)">🗺 Mapa</button>`;
   th+=`<button class="tab ${activeTab==='cal'?'active':''}" onclick="showTab('cal',this)">Calendário</button>`;
-  th+=`<button class="tab" onclick="openExportModal()" style="background:#e8f5d8;color:#3a6b10;border-color:#c0d8a0;">⬇ Exportar</button>`;
+  th+=`<button class="tab" onclick="openExportModal()" style="background:var(--green3);color:var(--green);border-color:var(--green2);">⬇ Exportar</button>`;
   th+=`<button class="tab-add" onclick="openNpModal()" title="Adicionar nova parcela">+ Parcela</button>`;
   tabsEl.innerHTML=th;
 
