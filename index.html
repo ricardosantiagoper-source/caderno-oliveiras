@@ -236,7 +236,19 @@
     .rel-table .total-row td{font-weight:700;background:var(--bg2);border-top:2px solid var(--border2);}
     .rel-cat-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px;}
 
-    @media(max-width:480px){
+  /* Alertas */
+  .alertas-banner{background:#fffbe6;border:1px solid #f0d060;border-radius:var(--radius);padding:12px 16px;margin-bottom:1.25rem;display:none;}
+  .alertas-banner.show{display:block;}
+  .alertas-banner-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+  .alertas-banner-title{font-size:13px;font-weight:600;color:#7a5a00;}
+  .alertas-banner-close{background:none;border:none;cursor:pointer;font-size:16px;color:#b08020;line-height:1;padding:0;}
+  .alerta-item{display:flex;align-items:flex-start;gap:8px;margin-bottom:6px;}
+  .alerta-item:last-child{margin-bottom:0;}
+  .alerta-icon{font-size:14px;flex-shrink:0;margin-top:1px;}
+  .alerta-text{font-size:13px;color:#5a4000;line-height:1.4;}
+  .alerta-cat{font-size:11px;padding:1px 6px;border-radius:8px;font-weight:500;margin-left:4px;}
+
+
       .summary-grid{grid-template-columns:repeat(2,1fr);}
       .cal-grid{grid-template-columns:repeat(3,1fr);}
       .field-grid{grid-template-columns:1fr;}
@@ -252,6 +264,13 @@
       <div class="sync-dot" id="syncDot"></div>
       <span id="syncText">A ligar...</span>
     </div>
+  </div>
+  <div class="alertas-banner" id="alertasBanner">
+    <div class="alertas-banner-header">
+      <span class="alertas-banner-title">🔔 Tarefas recomendadas este mês</span>
+      <button class="alertas-banner-close" onclick="fecharAlertas()">×</button>
+    </div>
+    <div id="alertasLista"></div>
   </div>
   <div class="tabs-wrap" id="mainTabs"></div>
   <div id="sections"></div>
@@ -1321,9 +1340,89 @@ window.gerarPDF=function(){
   closeExportModal();
 }
 
+// ── ALERTAS ──────────────────────────────────────────────────
+const ALERTAS_CAL=[
+  {mes:1,  tarefas:[
+    {icon:'✂️', texto:'Poda de formação e produção',         cat:'Poda',    bg:'#fde8c8',tc:'#8a4f0a'},
+    {icon:'🌿', texto:'Aplicação de caldo bordalês',          cat:'Tratamento', bg:'#faeae6',tc:'#9a3820'},
+  ]},
+  {mes:2,  tarefas:[
+    {icon:'✂️', texto:'Continuar poda de produção',           cat:'Poda',    bg:'#fde8c8',tc:'#8a4f0a'},
+    {icon:'🌱', texto:'Adubo de fundo — fósforo e potássio',  cat:'Adubação',bg:'#d8f5ea',tc:'#0e6e50'},
+  ]},
+  {mes:3,  tarefas:[
+    {icon:'🌱', texto:'Aplicação de azoto (ureia)',            cat:'Adubação',bg:'#d8f5ea',tc:'#0e6e50'},
+    {icon:'🌿', texto:'Tratamento preventivo contra gafa',     cat:'Tratamento', bg:'#faeae6',tc:'#9a3820'},
+  ]},
+  {mes:4,  tarefas:[
+    {icon:'🌱', texto:'Adubação foliar com micronutrientes',   cat:'Adubação',bg:'#d8f5ea',tc:'#0e6e50'},
+    {icon:'🔍', texto:'Monitorizar mosca da oliveira',         cat:'Fitofármaco',bg:'#faeae6',tc:'#9a3820'},
+  ]},
+  {mes:5,  tarefas:[
+    {icon:'💧', texto:'Início da rega',                        cat:'Rega',    bg:'#daeaf8',tc:'#1a5a95'},
+    {icon:'🌿', texto:'Tratamento contra traça da oliveira',   cat:'Fitofármaco',bg:'#faeae6',tc:'#9a3820'},
+  ]},
+  {mes:6,  tarefas:[
+    {icon:'💧', texto:'Manter rega regular',                   cat:'Rega',    bg:'#daeaf8',tc:'#1a5a95'},
+    {icon:'🌱', texto:'Adubação azotada de cobertura',         cat:'Adubação',bg:'#d8f5ea',tc:'#0e6e50'},
+  ]},
+  {mes:7,  tarefas:[
+    {icon:'💧', texto:'Rega intensa — calor máximo',           cat:'Rega',    bg:'#daeaf8',tc:'#1a5a95'},
+    {icon:'🌿', texto:'Controlo de mosca da oliveira',         cat:'Fitofármaco',bg:'#faeae6',tc:'#9a3820'},
+  ]},
+  {mes:8,  tarefas:[
+    {icon:'💧', texto:'Manter rega — verificar humidade',      cat:'Rega',    bg:'#daeaf8',tc:'#1a5a95'},
+    {icon:'🔍', texto:'Monitorizar e controlar mosca',         cat:'Fitofármaco',bg:'#faeae6',tc:'#9a3820'},
+  ]},
+  {mes:9,  tarefas:[
+    {icon:'🫒', texto:'Início da colheita — azeitona verde',   cat:'Colheita',bg:'#e8f5d8',tc:'#3a6b10'},
+    {icon:'💧', texto:'Reduzir gradualmente a rega',           cat:'Rega',    bg:'#daeaf8',tc:'#1a5a95'},
+  ]},
+  {mes:10, tarefas:[
+    {icon:'🫒', texto:'Colheita mista — azeitona madura',      cat:'Colheita',bg:'#e8f5d8',tc:'#3a6b10'},
+    {icon:'🌿', texto:'Tratamentos pós-colheita',              cat:'Tratamento',bg:'#faeae6',tc:'#9a3820'},
+  ]},
+  {mes:11, tarefas:[
+    {icon:'🫒', texto:'Colheita azeitona preta',               cat:'Colheita',bg:'#e8f5d8',tc:'#3a6b10'},
+    {icon:'🌱', texto:'Adubação de fundo — fósforo e potássio',cat:'Adubação',bg:'#d8f5ea',tc:'#0e6e50'},
+  ]},
+  {mes:12, tarefas:[
+    {icon:'✂️', texto:'Preparar e planear poda do próximo ano',cat:'Poda',    bg:'#fde8c8',tc:'#8a4f0a'},
+    {icon:'🌱', texto:'Aplicação de estrume orgânico',         cat:'Adubação',bg:'#d8f5ea',tc:'#0e6e50'},
+  ]},
+];
+
+function mostrarAlertas(){
+  const mesAtual=new Date().getMonth()+1;
+  const mesNome=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'][mesAtual-1];
+  const entrada=ALERTAS_CAL.find(a=>a.mes===mesAtual);
+  if(!entrada)return;
+
+  // Verificar se já foi fechado hoje
+  const chave='alertas_fechado_'+new Date().toISOString().split('T')[0];
+  if(localStorage.getItem(chave))return;
+
+  const lista=document.getElementById('alertasLista');
+  const banner=document.getElementById('alertasBanner');
+  lista.innerHTML=entrada.tarefas.map(t=>
+    `<div class="alerta-item">
+      <span class="alerta-icon">${t.icon}</span>
+      <span class="alerta-text">${t.texto}<span class="alerta-cat" style="background:${t.bg};color:${t.tc};">${t.cat}</span></span>
+    </div>`
+  ).join('');
+  banner.classList.add('show');
+}
+
+window.fecharAlertas=function(){
+  document.getElementById('alertasBanner').classList.remove('show');
+  const chave='alertas_fechado_'+new Date().toISOString().split('T')[0];
+  localStorage.setItem(chave,'1');
+}
+
 // ── INIT ────────────────────────────────────────────────────
 rebuildTabs();
 renderVisao();
+mostrarAlertas();
 </script>
 </body>
 </html>
