@@ -337,6 +337,32 @@
   </div>
 </div>
 
+<!-- Modal exportar PDF -->
+<div class="modal-bg" id="exportModalBg">
+  <div class="modal" style="width:440px;">
+    <h3>Exportar PDF</h3>
+    <div class="modal-sub">Escolhe o que queres incluir no documento.</div>
+    <div class="mfield">
+      <label>Parcelas a incluir</label>
+      <div id="exportParcelasCheck" style="display:flex;flex-direction:column;gap:6px;margin-top:4px;"></div>
+    </div>
+    <div class="mfield">
+      <label>Conteúdo</label>
+      <div style="display:flex;flex-direction:column;gap:6px;margin-top:4px;">
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:normal;text-transform:none;letter-spacing:0;cursor:pointer;"><input type="checkbox" id="expInfo" checked> Informação geral da parcela</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:normal;text-transform:none;letter-spacing:0;cursor:pointer;"><input type="checkbox" id="expOps" checked> Registos de operações</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:normal;text-transform:none;letter-spacing:0;cursor:pointer;"><input type="checkbox" id="expColheitas" checked> Colheitas e produção</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:normal;text-transform:none;letter-spacing:0;cursor:pointer;"><input type="checkbox" id="expCustos" checked> Resumo de custos</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:normal;text-transform:none;letter-spacing:0;cursor:pointer;"><input type="checkbox" id="expFotos" checked> Fotografias</label>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeExportModal()">Cancelar</button>
+      <button class="btn-save" onclick="gerarPDF()">⬇ Gerar PDF</button>
+    </div>
+  </div>
+</div>
+
 <!-- Lightbox -->
 <div class="lightbox" id="lightbox" onclick="closeLightbox()">
   <button class="lightbox-close" onclick="closeLightbox()">×</button>
@@ -494,6 +520,7 @@ function rebuildTabs(){
   th+=`<button class="tab ${activeTab==='colheitas'?'active':''}" onclick="showTab('colheitas',this)">🫒 Colheitas</button>`;
   th+=`<button class="tab ${activeTab==='relatorios'?'active':''}" onclick="showTab('relatorios',this)">📊 Relatórios</button>`;
   th+=`<button class="tab ${activeTab==='cal'?'active':''}" onclick="showTab('cal',this)">Calendário</button>`;
+  th+=`<button class="tab" onclick="openExportModal()" style="background:#e8f5d8;color:#3a6b10;border-color:#c0d8a0;">⬇ Exportar</button>`;
   th+=`<button class="tab-add" onclick="openNpModal()" title="Adicionar nova parcela">+ Parcela</button>`;
   tabsEl.innerHTML=th;
 
@@ -1129,6 +1156,170 @@ function renderRelatorios(){
 }
 
 window.setRelAno=function(ano){relAnoSel=ano;renderRelatorios();}
+
+// ── EXPORTAR PDF ─────────────────────────────────────────────
+window.openExportModal=function(){
+  const cont=document.getElementById('exportParcelasCheck');
+  cont.innerHTML=state.parcelas.map((p,i)=>
+    `<label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:normal;text-transform:none;letter-spacing:0;cursor:pointer;">
+      <input type="checkbox" class="exp-parcela-cb" value="${i}" checked> ${p.nome}${p.porPlantar?' (por plantar)':''}
+    </label>`
+  ).join('');
+  document.getElementById('exportModalBg').classList.add('open');
+}
+window.closeExportModal=function(){document.getElementById('exportModalBg').classList.remove('open');}
+
+window.gerarPDF=function(){
+  const selIdxs=[...document.querySelectorAll('.exp-parcela-cb:checked')].map(cb=>parseInt(cb.value));
+  const incInfo=document.getElementById('expInfo').checked;
+  const incOps=document.getElementById('expOps').checked;
+  const incColheitas=document.getElementById('expColheitas').checked;
+  const incCustos=document.getElementById('expCustos').checked;
+  const incFotos=document.getElementById('expFotos').checked;
+
+  if(selIdxs.length===0){alert('Seleciona pelo menos uma parcela.');return;}
+
+  const hoje=new Date().toLocaleDateString('pt-PT');
+  let html=`<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8">
+  <title>Caderno de Oliveiras</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:Arial,sans-serif;color:#1a1a18;font-size:13px;line-height:1.5;}
+    .page-break{page-break-before:always;}
+    h1{font-size:22px;font-weight:700;margin-bottom:4px;}
+    h2{font-size:16px;font-weight:700;margin:20px 0 10px;color:#2a5aa0;border-bottom:2px solid #daeaf8;padding-bottom:4px;}
+    h3{font-size:13px;font-weight:700;margin:14px 0 6px;color:#1a1a18;}
+    .header{padding:20px 24px 14px;border-bottom:2px solid #1a1a18;margin-bottom:20px;}
+    .header-sub{font-size:12px;color:#9a9a95;margin-top:2px;}
+    .section{padding:0 24px;margin-bottom:16px;}
+    .info-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px;}
+    .info-item{background:#f5f4f0;border-radius:6px;padding:8px 10px;}
+    .info-label{font-size:10px;color:#9a9a95;text-transform:uppercase;letter-spacing:.3px;margin-bottom:2px;}
+    .info-val{font-size:13px;font-weight:600;}
+    table{width:100%;border-collapse:collapse;margin-bottom:12px;font-size:12px;}
+    th{background:#f5f4f0;text-align:left;padding:7px 10px;font-size:10px;text-transform:uppercase;letter-spacing:.3px;color:#5a5a55;border-bottom:1px solid #e0ddd5;}
+    td{padding:7px 10px;border-bottom:1px solid #eeecea;vertical-align:top;}
+    tr:last-child td{border-bottom:none;}
+    .badge{display:inline-block;font-size:10px;padding:2px 7px;border-radius:10px;font-weight:500;}
+    .cat-pill{display:inline-block;font-size:10px;padding:1px 6px;border-radius:8px;margin-right:3px;}
+    .total-row{font-weight:700;background:#f5f4f0;}
+    .foto-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;}
+    .foto-item img{width:100%;height:100px;object-fit:cover;border-radius:4px;}
+    .foto-item p{font-size:10px;color:#9a9a95;margin-top:3px;}
+    .resumo-custos{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px;}
+    .resumo-item{background:#f5f4f0;border-radius:6px;padding:8px 10px;}
+    .page-footer{text-align:center;font-size:10px;color:#9a9a95;padding:10px 24px;border-top:1px solid #e0ddd5;margin-top:20px;}
+  </style></head><body>
+  <div class="header">
+    <h1>🫒 Caderno de Campo — Oliveiras</h1>
+    <div class="header-sub">Gerado em ${hoje} · ${selIdxs.length} parcela${selIdxs.length!==1?'s':''}</div>
+  </div>`;
+
+  selIdxs.forEach((idx,pi)=>{
+    const p=state.parcelas[idx];
+    if(pi>0) html+=`<div class="page-break"></div>`;
+
+    html+=`<div class="section"><h2>${p.nome}${p.porPlantar?' — Por plantar':''}</h2>`;
+
+    // Info geral
+    if(incInfo){
+      html+=`<div class="info-grid">
+        <div class="info-item"><div class="info-label">Área</div><div class="info-val">${p.area?p.area+' ha':'—'}</div></div>
+        <div class="info-item"><div class="info-label">Nº de árvores</div><div class="info-val">${p.arvores||'—'}</div></div>
+        <div class="info-item"><div class="info-label">Variedade</div><div class="info-val">${p.variedade||'—'}</div></div>
+        <div class="info-item"><div class="info-label">Data de plantação</div><div class="info-val">${formatDate(p.plantacao)||'—'}</div></div>
+        ${p.notas?`<div class="info-item" style="grid-column:1/-1"><div class="info-label">Notas</div><div class="info-val" style="font-weight:normal;">${p.notas}</div></div>`:''}
+      </div>`;
+    }
+
+    // Operações
+    if(incOps){
+      let todasOps=[];
+      CATS.forEach(c=>{(p.entries[c.id]||[]).forEach(e=>{todasOps.push({...e,catLabel:c.label,catDot:c.dot,catBg:c.bg,catTc:c.tc});});});
+      todasOps.sort((a,b)=>(b.data||'').localeCompare(a.data||''));
+      if(todasOps.length>0){
+        html+=`<h3>Registos de operações</h3><table>
+          <thead><tr><th>Data</th><th>Categoria</th><th>Descrição</th><th>Custo</th></tr></thead><tbody>`;
+        todasOps.forEach(e=>{
+          html+=`<tr>
+            <td style="white-space:nowrap;">${formatDate(e.data)||'—'}</td>
+            <td><span class="cat-pill" style="background:${e.catBg};color:${e.catTc};">${e.catLabel}</span></td>
+            <td>${e.proc||'—'}${e.cat==='fito'&&e.marca?`<br><span style="font-size:10px;color:#9a9a95;">Marca: ${e.marca}${e.qtd?' · Dose: '+e.qtd:''}${e.alvo?' · Alvo: '+e.alvo:''}</span>`:''}${e.notas?`<br><span style="font-size:10px;color:#9a9a95;">${e.notas}</span>`:''}</td>
+            <td style="white-space:nowrap;">${e.custo?parseFloat(e.custo).toFixed(2)+'€':'—'}</td>
+          </tr>`;
+        });
+        html+=`</tbody></table>`;
+      }
+    }
+
+    // Colheitas
+    if(incColheitas){
+      const cols=p.colheitas||[];
+      if(cols.length>0){
+        const totKg=cols.reduce((s,c)=>s+(parseFloat(c.kg)||0),0);
+        const totL=cols.reduce((s,c)=>s+(parseFloat(c.litros)||0),0);
+        html+=`<h3>Colheitas</h3><table>
+          <thead><tr><th>Data</th><th>Azeitona (kg)</th><th>Azeite (L)</th><th>Rendimento</th><th>Lagar</th><th>Custo</th></tr></thead><tbody>`;
+        [...cols].sort((a,b)=>(b.data||'').localeCompare(a.data||'')).forEach(c=>{
+          const r=(c.kg&&c.litros)?(parseFloat(c.kg)/parseFloat(c.litros)).toFixed(2):null;
+          html+=`<tr>
+            <td>${formatDate(c.data)||'—'}</td>
+            <td>${c.kg?parseFloat(c.kg).toFixed(0)+' kg':'—'}</td>
+            <td>${c.litros?parseFloat(c.litros).toFixed(1)+' L':'—'}</td>
+            <td>${r?r+' kg/L':'—'}</td>
+            <td>${c.lagar||'—'}</td>
+            <td>${c.custo?parseFloat(c.custo).toFixed(2)+'€':'—'}</td>
+          </tr>`;
+        });
+        html+=`<tr class="total-row"><td>Total</td><td>${totKg.toFixed(0)} kg</td><td>${totL.toFixed(1)} L</td><td>${totKg&&totL?(totKg/totL).toFixed(2)+' kg/L':'—'}</td><td></td><td>${cols.reduce((s,c)=>s+(parseFloat(c.custo)||0),0).toFixed(2)}€</td></tr>`;
+        html+=`</tbody></table>`;
+      }
+    }
+
+    // Custos
+    if(incCustos){
+      let totalCusto=0;
+      const porCat={};
+      CATS.forEach(c=>{
+        const t=(p.entries[c.id]||[]).reduce((s,e)=>s+(parseFloat(e.custo)||0),0);
+        if(t>0){porCat[c.label]={total:t,bg:c.bg,tc:c.tc};totalCusto+=t;}
+      });
+      const tCol=(p.colheitas||[]).reduce((s,c)=>s+(parseFloat(c.custo)||0),0);
+      if(tCol>0){porCat['Colheita']={total:tCol,bg:'#e8f5d8',tc:'#3a6b10'};totalCusto+=tCol;}
+      if(totalCusto>0){
+        html+=`<h3>Resumo de custos</h3><div class="resumo-custos">`;
+        Object.entries(porCat).forEach(([label,v])=>{
+          html+=`<div class="resumo-item"><div class="info-label">${label}</div><div class="info-val">${v.total.toFixed(2)}€</div></div>`;
+        });
+        html+=`<div class="resumo-item" style="background:#1a1a18;color:#fff;"><div class="info-label" style="color:#ccc;">Total geral</div><div class="info-val" style="color:#fff;">${totalCusto.toFixed(2)}€</div></div>`;
+        html+=`</div>`;
+      }
+    }
+
+    // Fotos
+    if(incFotos){
+      const fotos=p.fotos||[];
+      if(fotos.length>0){
+        html+=`<h3>Fotografias</h3><div class="foto-grid">`;
+        fotos.forEach(f=>{
+          html+=`<div class="foto-item"><img src="${f.data}"><p>${formatDate(f.data_reg)||''}${f.nota?' — '+f.nota:''}</p></div>`;
+        });
+        html+=`</div>`;
+      }
+    }
+
+    html+=`</div>`;
+  });
+
+  html+=`<div class="page-footer">Caderno de Campo — Oliveiras · Exportado em ${hoje}</div></body></html>`;
+
+  // Abrir janela de impressão
+  const win=window.open('','_blank');
+  win.document.write(html);
+  win.document.close();
+  win.onload=function(){win.print();};
+  closeExportModal();
+}
 
 // ── INIT ────────────────────────────────────────────────────
 rebuildTabs();
