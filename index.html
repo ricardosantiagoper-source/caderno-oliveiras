@@ -6,6 +6,8 @@
   <meta name="theme-color" content="#ffffff">
   <title>Caderno de Oliveiras</title>
   <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
     *{box-sizing:border-box;margin:0;padding:0;}
     :root{
@@ -247,6 +249,19 @@
   .alerta-icon{font-size:14px;flex-shrink:0;margin-top:1px;}
   .alerta-text{font-size:13px;color:#5a4000;line-height:1.4;}
   .alerta-cat{font-size:11px;padding:1px 6px;border-radius:8px;font-weight:500;margin-left:4px;}
+
+  /* Mapa */
+  .mapa-wrap{border-radius:var(--radius);overflow:hidden;border:1px solid var(--border);margin-bottom:1rem;}
+  #mapaLeaflet{height:380px;width:100%;}
+  .mapa-parcela-list{display:flex;flex-direction:column;gap:6px;margin-bottom:1rem;}
+  .mapa-parcela-row{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);}
+  .mapa-parcela-cor{width:14px;height:14px;border-radius:50%;flex-shrink:0;border:2px solid rgba(0,0,0,0.15);}
+  .mapa-parcela-nome{flex:1;font-size:13px;font-weight:500;}
+  .mapa-parcela-coords{font-size:11px;color:var(--text3);}
+  .mapa-btn{font-size:12px;padding:4px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:transparent;color:var(--text2);cursor:pointer;font-family:var(--font);white-space:nowrap;}
+  .mapa-btn:hover{background:var(--bg2);}
+  .mapa-btn.danger:hover{border-color:#f0b8b8;color:#a02020;background:#fef0f0;}
+  .mapa-instrucao{font-size:12px;color:var(--text3);padding:10px 0;text-align:center;font-style:italic;}
 
 
       .summary-grid{grid-template-columns:repeat(2,1fr);}
@@ -538,6 +553,7 @@ function rebuildTabs(){
   th+=`<button class="tab ${activeTab==='ov'?'active':''}" onclick="showTab('ov',this)">Timeline</button>`;
   th+=`<button class="tab ${activeTab==='colheitas'?'active':''}" onclick="showTab('colheitas',this)">🫒 Colheitas</button>`;
   th+=`<button class="tab ${activeTab==='relatorios'?'active':''}" onclick="showTab('relatorios',this)">📊 Relatórios</button>`;
+  th+=`<button class="tab ${activeTab==='mapa'?'active':''}" onclick="showTab('mapa',this)">🗺 Mapa</button>`;
   th+=`<button class="tab ${activeTab==='cal'?'active':''}" onclick="showTab('cal',this)">Calendário</button>`;
   th+=`<button class="tab" onclick="openExportModal()" style="background:#e8f5d8;color:#3a6b10;border-color:#c0d8a0;">⬇ Exportar</button>`;
   th+=`<button class="tab-add" onclick="openNpModal()" title="Adicionar nova parcela">+ Parcela</button>`;
@@ -548,6 +564,7 @@ function rebuildTabs(){
   sh+=`<div class="section ${activeTab==='ov'?'active':''}" id="sec-ov"></div>`;
   sh+=`<div class="section ${activeTab==='colheitas'?'active':''}" id="sec-colheitas"></div>`;
   sh+=`<div class="section ${activeTab==='relatorios'?'active':''}" id="sec-relatorios"></div>`;
+  sh+=`<div class="section ${activeTab==='mapa'?'active':''}" id="sec-mapa"></div>`;
   sh+=`<div class="section ${activeTab==='cal'?'active':''}" id="sec-cal"></div>`;
   secsEl.innerHTML=sh;
 }
@@ -557,6 +574,7 @@ function refreshCurrentTab(){
   else if(activeTab==='ov')renderOverview();
   else if(activeTab==='colheitas')renderColheitas();
   else if(activeTab==='relatorios')renderRelatorios();
+  else if(activeTab==='mapa')renderMapa();
   else if(activeTab==='cal')renderCal();
   else{const idx=parseInt(activeTab.replace('p',''));if(!isNaN(idx))renderParcela(idx);}
 }
@@ -1338,6 +1356,109 @@ window.gerarPDF=function(){
   win.document.close();
   win.onload=function(){win.print();};
   closeExportModal();
+}
+
+// ── MAPA ─────────────────────────────────────────────────────
+const CORES_MAPA=['#2a5aa0','#d94040','#5a9020','#b07010','#1a9870','#c05030','#7040b0','#808078'];
+let mapaInstance=null, mapaMarkers=[], mapaModoPicker=false, mapaPickerIdx=null;
+
+function renderMapa(){
+  const comCoords=state.parcelas.filter(p=>p.lat&&p.lng);
+
+  // Lista de parcelas
+  const listaHtml=state.parcelas.map((p,i)=>{
+    const cor=CORES_MAPA[i%CORES_MAPA.length];
+    const temCoords=p.lat&&p.lng;
+    return `<div class="mapa-parcela-row">
+      <div class="mapa-parcela-cor" style="background:${cor}"></div>
+      <div class="mapa-parcela-nome">${p.nome}</div>
+      <div class="mapa-parcela-coords">${temCoords?`${parseFloat(p.lat).toFixed(5)}, ${parseFloat(p.lng).toFixed(5)}`:'Sem localização'}</div>
+      <button class="mapa-btn" onclick="iniciarPicker(${i})">${temCoords?'Mover':'📍 Marcar'}</button>
+      ${temCoords?`<button class="mapa-btn danger" onclick="removerCoords(${i})">×</button>`:''}
+    </div>`;
+  }).join('');
+
+  document.getElementById('sec-mapa').innerHTML=`
+    <div class="card card-pad" style="margin-bottom:1rem;">
+      <div style="font-size:14px;font-weight:600;margin-bottom:10px;">🗺 Mapa das parcelas</div>
+      <div class="mapa-parcela-list">${listaHtml}</div>
+      <p class="mapa-instrucao" id="mapaInstrucao" style="display:none;">Clica no mapa para marcar a localização da parcela selecionada. Clica em "Cancelar" para desistir.</p>
+      <button class="mapa-btn" id="mapaCancelarBtn" style="display:none;margin-bottom:8px;" onclick="cancelarPicker()">Cancelar marcação</button>
+    </div>
+    <div class="mapa-wrap"><div id="mapaLeaflet"></div></div>`;
+
+  // Inicializar mapa
+  setTimeout(()=>{
+    if(mapaInstance){mapaInstance.remove();mapaInstance=null;}
+    // Centro por defeito — Portugal
+    const centro=comCoords.length>0
+      ?[parseFloat(comCoords[0].lat),parseFloat(comCoords[0].lng)]
+      :[39.5, -8.0];
+    const zoom=comCoords.length>0?14:7;
+
+    mapaInstance=L.map('mapaLeaflet').setView(centro,zoom);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+      attribution:'© OpenStreetMap',maxZoom:19
+    }).addTo(mapaInstance);
+
+    // Adicionar marcadores
+    mapaMarkers=[];
+    state.parcelas.forEach((p,i)=>{
+      if(p.lat&&p.lng){
+        const cor=CORES_MAPA[i%CORES_MAPA.length];
+        const icon=L.divIcon({
+          className:'',
+          html:`<div style="background:${cor};width:28px;height:28px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700;">${i+1}</div>`,
+          iconSize:[28,28],iconAnchor:[14,14]
+        });
+        const marker=L.marker([parseFloat(p.lat),parseFloat(p.lng)],{icon})
+          .addTo(mapaInstance)
+          .bindPopup(`<b>${p.nome}</b>${p.variedade?'<br>'+p.variedade:''}${p.arvores?'<br>'+p.arvores+' árvores':''}${p.area?'<br>'+p.area+' ha':''}`);
+        mapaMarkers.push(marker);
+      }
+    });
+
+    // Ajustar vista a todos os marcadores
+    if(comCoords.length>1){
+      const bounds=L.latLngBounds(comCoords.map(p=>[parseFloat(p.lat),parseFloat(p.lng)]));
+      mapaInstance.fitBounds(bounds,{padding:[30,30]});
+    }
+
+    // Click no mapa para marcar parcela
+    mapaInstance.on('click',function(e){
+      if(!mapaModoPicker||mapaPickerIdx===null)return;
+      const {lat,lng}=e.latlng;
+      state.parcelas[mapaPickerIdx].lat=lat.toFixed(6);
+      state.parcelas[mapaPickerIdx].lng=lng.toFixed(6);
+      save();
+      cancelarPicker();
+      renderMapa();
+    });
+  },100);
+}
+
+window.iniciarPicker=function(idx){
+  mapaModoPicker=true; mapaPickerIdx=idx;
+  document.getElementById('mapaInstrucao').style.display='block';
+  document.getElementById('mapaCancelarBtn').style.display='inline-block';
+  document.getElementById('mapaInstrucao').textContent=`Clica no mapa para marcar "${state.parcelas[idx].nome}". Podes fazer zoom primeiro para maior precisão.`;
+  if(mapaInstance) mapaInstance.getContainer().style.cursor='crosshair';
+}
+
+window.cancelarPicker=function(){
+  mapaModoPicker=false; mapaPickerIdx=null;
+  const instr=document.getElementById('mapaInstrucao');
+  const btn=document.getElementById('mapaCancelarBtn');
+  if(instr)instr.style.display='none';
+  if(btn)btn.style.display='none';
+  if(mapaInstance) mapaInstance.getContainer().style.cursor='';
+}
+
+window.removerCoords=function(idx){
+  if(!confirm('Remover a localização desta parcela?'))return;
+  delete state.parcelas[idx].lat;
+  delete state.parcelas[idx].lng;
+  save(); renderMapa();
 }
 
 // ── ALERTAS ──────────────────────────────────────────────────
