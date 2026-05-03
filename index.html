@@ -341,9 +341,9 @@
     <img id="fotoPreview" class="foto-preview">
     <div class="upload-zone" onclick="document.getElementById('fotoFileInput').click()">
       <div style="font-size:26px;">📷</div>
-      <p>Clica para escolher uma foto ou tirar uma</p>
+      <p>Clica para escolher da galeria ou tirar uma foto</p>
     </div>
-    <input type="file" id="fotoFileInput" accept="image/*" capture="environment" style="display:none" onchange="onFotoSelected(event)">
+    <input type="file" id="fotoFileInput" accept="image/*" style="display:none" onchange="onFotoSelected(event)">
     <div class="mfield"><label>Data</label><input type="date" id="fotoData"></div>
     <div class="mfield"><label>Nota / descrição</label><textarea id="fotoNota" placeholder="ex: Estado após poda, início de floração..." style="min-height:60px;"></textarea></div>
     <div class="modal-actions">
@@ -413,6 +413,33 @@
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeExportModal()">Cancelar</button>
       <button class="btn-save" onclick="gerarPDF()">⬇ Gerar PDF</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal despesas gerais -->
+<div class="modal-bg" id="despModalBg">
+  <div class="modal" style="width:400px;">
+    <h3 id="despTitle">Nova despesa geral</h3>
+    <div class="modal-sub">Despesas não associadas a uma parcela específica.</div>
+    <div class="mfield"><label>Data</label><input type="date" id="despData"></div>
+    <div class="mfield"><label>Categoria</label>
+      <select id="despCat">
+        <option value="adubo">Adubo / fertilizante</option>
+        <option value="fitofarmaco">Fitofármaco</option>
+        <option value="combustivel">Combustível</option>
+        <option value="equipamento">Equipamento / ferramentas</option>
+        <option value="maodeobra">Mão de obra</option>
+        <option value="agua">Água / rega</option>
+        <option value="outro">Outro</option>
+      </select>
+    </div>
+    <div class="mfield"><label>Descrição</label><input type="text" id="despDesc" placeholder="ex: Saca de adubo NPK 15-15-15 (20kg)"></div>
+    <div class="mfield"><label>Valor (€)</label><input type="number" id="despValor" placeholder="0.00" min="0" step="0.01"></div>
+    <div class="mfield"><label>Notas — opcional</label><input type="text" id="despNotas" placeholder="Fornecedor, quantidade, observações..."></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeDespModal()">Cancelar</button>
+      <button class="btn-save" onclick="saveDesp()">Guardar</button>
     </div>
   </div>
 </div>
@@ -526,6 +553,7 @@ onSnapshot(doc(db,STATE_DOC),(snap)=>{
       const remote=JSON.parse(snap.data().data);
       // merge: remote wins unless we're mid-edit
       state=remote;
+      if(!state.despesas)state.despesas=[];
       // ensure structure
       state.parcelas.forEach(p=>{
         if(!p.entries)p.entries={};
@@ -571,6 +599,7 @@ function rebuildTabs(){
     th+=`<button class="tab ${activeTab==='p'+i?'active':''}" onclick="showTab('p${i}',this)">${nm}</button>`;
   });
   th+=`<button class="tab ${activeTab==='ov'?'active':''}" onclick="showTab('ov',this)">Timeline</button>`;
+  th+=`<button class="tab ${activeTab==='despesas'?'active':''}" onclick="showTab('despesas',this)">💶 Despesas gerais</button>`;
   th+=`<button class="tab ${activeTab==='colheitas'?'active':''}" onclick="showTab('colheitas',this)">🫒 Colheitas</button>`;
   th+=`<button class="tab ${activeTab==='relatorios'?'active':''}" onclick="showTab('relatorios',this)">📊 Relatórios</button>`;
   th+=`<button class="tab ${activeTab==='mapa'?'active':''}" onclick="showTab('mapa',this)">🗺 Mapa</button>`;
@@ -582,6 +611,7 @@ function rebuildTabs(){
   let sh=`<div class="section ${activeTab==='visao'?'active':''}" id="sec-visao"></div>`;
   state.parcelas.forEach((_,i)=>{sh+=`<div class="section ${activeTab==='p'+i?'active':''}" id="sec-p${i}"></div>`;});
   sh+=`<div class="section ${activeTab==='ov'?'active':''}" id="sec-ov"></div>`;
+  sh+=`<div class="section ${activeTab==='despesas'?'active':''}" id="sec-despesas"></div>`;
   sh+=`<div class="section ${activeTab==='colheitas'?'active':''}" id="sec-colheitas"></div>`;
   sh+=`<div class="section ${activeTab==='relatorios'?'active':''}" id="sec-relatorios"></div>`;
   sh+=`<div class="section ${activeTab==='mapa'?'active':''}" id="sec-mapa"></div>`;
@@ -592,6 +622,7 @@ function rebuildTabs(){
 function refreshCurrentTab(){
   if(activeTab==='visao')renderVisao();
   else if(activeTab==='ov')renderOverview();
+  else if(activeTab==='despesas')renderDespesas();
   else if(activeTab==='colheitas')renderColheitas();
   else if(activeTab==='relatorios')renderRelatorios();
   else if(activeTab==='mapa')renderMapa();
@@ -614,6 +645,7 @@ function renderVisao(){
     const area=parseFloat(p.area)||0;
     let pc=0;
     CATS.forEach(c=>{(p.entries[c.id]||[]).forEach(e=>{pc+=parseFloat(e.custo)||0;});});
+    (p.colheitas||[]).forEach(c=>{pc+=parseFloat(c.custo)||0;});
     if(!p.porPlantar){totalArv+=arv;totalArea+=area;totalCusto+=pc;totalAtivas++;}
     const nf=(p.fotos||[]).length;
     const badge=p.porPlantar?'<span class="badge badge-amber">Por plantar</span>':`<span class="badge badge-green">${arv} árvores</span>`;
@@ -627,13 +659,25 @@ function renderVisao(){
       <button class="go-btn" onclick="showTab('p${i}',null)">Abrir</button>
     </div>`;
   });
+  const totalDesp=(state.despesas||[]).reduce((s,d)=>s+(parseFloat(d.valor)||0),0);
+  const totalGeral=totalCusto+totalDesp;
   document.getElementById('sec-visao').innerHTML=`
     <div class="summary-grid">
       <div class="metric"><div class="metric-label">Árvores</div><div class="metric-value">${totalArv||'—'}</div><div class="metric-sub">nas ativas</div></div>
       <div class="metric"><div class="metric-label">Área total</div><div class="metric-value">${totalArea?totalArea.toFixed(2):'—'}</div><div class="metric-sub">hectares</div></div>
       <div class="metric"><div class="metric-label">Parcelas ativas</div><div class="metric-value">${totalAtivas}</div><div class="metric-sub">de ${state.parcelas.length}</div></div>
-      <div class="metric"><div class="metric-label">Custos totais</div><div class="metric-value">${totalCusto?totalCusto.toFixed(0)+'€':'—'}</div><div class="metric-sub">todas as parcelas</div></div>
+      <div class="metric"><div class="metric-label">Custos totais</div><div class="metric-value">${totalGeral?totalGeral.toFixed(0)+'€':'—'}</div><div class="metric-sub">parcelas + gerais</div></div>
     </div>
+    ${totalDesp>0?`<div class="card card-pad" style="margin-bottom:1rem;border-left:3px solid var(--earth);">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--text);">💶 Despesas gerais</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:2px;">${(state.despesas||[]).length} registo${(state.despesas||[]).length!==1?'s':''}</div>
+        </div>
+        <div style="font-size:18px;font-weight:700;color:var(--earth);">${totalDesp.toFixed(2)}€</div>
+        <button class="go-btn" onclick="showTab('despesas',null)">Ver tudo</button>
+      </div>
+    </div>`:''}
     <div class="card"><div class="card-header"><span class="card-title">Parcelas</span></div>${rows}</div>`;
 }
 
@@ -641,13 +685,28 @@ function renderVisao(){
 function renderParcela(idx){
   const p=state.parcelas[idx];if(!p)return;
   const fotos=p.fotos||[];
-  const fotoGrid=fotos.length===0?'':
-    `<div class="photo-grid">${[...fotos].reverse().map(f=>`
-      <div class="photo-card" onclick="openLightbox('${f._id}',${idx})">
-        <img src="${f.data}" alt="foto">
-        <div class="photo-card-overlay"><div class="photo-card-date">${formatDate(f.data_reg)||''}</div></div>
-        <button class="photo-card-del" onclick="event.stopPropagation();delFoto(${idx},'${f._id}')">×</button>
-      </div>`).join('')}</div>`;
+  // Agrupar fotos por mês
+  const fotosPorMes={};
+  fotos.forEach(f=>{
+    const mes=f.data_reg?f.data_reg.substring(0,7):'sem-data';
+    if(!fotosPorMes[mes])fotosPorMes[mes]=[];
+    fotosPorMes[mes].push(f);
+  });
+  const mesesOrdenados=Object.keys(fotosPorMes).sort((a,b)=>b.localeCompare(a));
+  const meses_pt=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+  const fotoGrid=fotos.length===0?'':mesesOrdenados.map(mes=>{
+    const label=mes==='sem-data'?'Sem data':(()=>{const[y,m]=mes.split('-');return `${meses_pt[parseInt(m)-1]} ${y}`;})();
+    const fs=fotosPorMes[mes];
+    return `<div style="margin-bottom:14px;">
+      <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid var(--border);">${label} <span style="font-weight:400;color:var(--text3);">(${fs.length})</span></div>
+      <div class="photo-grid">${fs.map(f=>`
+        <div class="photo-card" onclick="openLightbox('${f._id}',${idx})">
+          <img src="${f.data}" alt="foto">
+          <div class="photo-card-overlay"><div class="photo-card-date">${formatDate(f.data_reg)||''}</div></div>
+          <button class="photo-card-del" onclick="event.stopPropagation();delFoto(${idx},'${f._id}')">×</button>
+        </div>`).join('')}</div>
+    </div>`;
+  }).join('');
 
   const fotoCat=`<div class="cat-block">
     <div class="cat-header" onclick="toggleCat('${p.id}_fotos')">
@@ -1486,6 +1545,119 @@ window.removerCoords=function(idx){
   delete state.parcelas[idx].lat;
   delete state.parcelas[idx].lng;
   save(); renderMapa();
+}
+
+// ── DESPESAS GERAIS ──────────────────────────────────────────
+const DESP_CATS={
+  adubo:       {label:'Adubo / fertilizante', dot:'#1a9870', bg:'#d8f5ea', tc:'#0e6e50'},
+  fitofarmaco: {label:'Fitofármaco',           dot:'#c05030', bg:'#faeae6', tc:'#9a3820'},
+  combustivel: {label:'Combustível',            dot:'#b07010', bg:'#fde8c8', tc:'#8a4f0a'},
+  equipamento: {label:'Equipamento',            dot:'#2878cc', bg:'#daeaf8', tc:'#1a5a95'},
+  maodeobra:   {label:'Mão de obra',            dot:'#7a5c2e', bg:'#f5ede0', tc:'#5a3c18'},
+  agua:        {label:'Água / rega',            dot:'#1a6a9a', bg:'#d8eef8', tc:'#0e4a7a'},
+  outro:       {label:'Outro',                  dot:'#808078', bg:'#eeecea', tc:'#505048'},
+};
+
+let editDespId=null;
+
+function despCatInfo(id){return DESP_CATS[id]||DESP_CATS.outro;}
+
+window.openDespModal=function(id){
+  editDespId=id||null;
+  const d=id?(state.despesas||[]).find(x=>x._id===id):null;
+  document.getElementById('despTitle').textContent=id?'Editar despesa':'Nova despesa geral';
+  document.getElementById('despData').value=d?d.data:new Date().toISOString().split('T')[0];
+  document.getElementById('despCat').value=d?d.cat:'adubo';
+  document.getElementById('despDesc').value=d?d.desc:'';
+  document.getElementById('despValor').value=d&&d.valor?d.valor:'';
+  document.getElementById('despNotas').value=d&&d.notas?d.notas:'';
+  document.getElementById('despModalBg').classList.add('open');
+}
+window.closeDespModal=function(){document.getElementById('despModalBg').classList.remove('open');}
+window.saveDesp=function(){
+  if(!state.despesas)state.despesas=[];
+  const d={
+    _id:editDespId||uid(),
+    data:document.getElementById('despData').value,
+    cat:document.getElementById('despCat').value,
+    desc:document.getElementById('despDesc').value,
+    valor:document.getElementById('despValor').value,
+    notas:document.getElementById('despNotas').value,
+  };
+  if(editDespId){const i=state.despesas.findIndex(x=>x._id===editDespId);if(i>=0)state.despesas[i]=d;}
+  else state.despesas.push(d);
+  save();closeDespModal();renderDespesas();
+}
+window.delDesp=function(id){
+  if(!confirm('Eliminar esta despesa?'))return;
+  state.despesas=state.despesas.filter(x=>x._id!==id);
+  save();renderDespesas();
+}
+
+function renderDespesas(){
+  if(!state.despesas)state.despesas=[];
+  const desps=[...state.despesas].sort((a,b)=>(b.data||'').localeCompare(a.data||''));
+  const total=desps.reduce((s,d)=>s+(parseFloat(d.valor)||0),0);
+
+  // Totais por categoria
+  const porCat={};
+  desps.forEach(d=>{
+    if(!porCat[d.cat])porCat[d.cat]=0;
+    porCat[d.cat]+=parseFloat(d.valor)||0;
+  });
+
+  const catSummary=Object.entries(porCat).sort((a,b)=>b[1]-a[1]).map(([cat,val])=>{
+    const c=despCatInfo(cat);
+    return `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);">
+      <div style="width:8px;height:8px;border-radius:50%;background:${c.dot};flex-shrink:0;"></div>
+      <span style="flex:1;font-size:13px;color:var(--text2);">${c.label}</span>
+      <span style="font-size:13px;font-weight:600;color:var(--text);">${val.toFixed(2)}€</span>
+    </div>`;
+  }).join('');
+
+  const rows=desps.length===0
+    ?'<div style="text-align:center;padding:2rem;font-size:13px;color:var(--text3);">Sem despesas gerais registadas.<br>Adiciona despesas que não são de uma parcela específica.</div>'
+    :desps.map(d=>{
+      const c=despCatInfo(d.cat);
+      return `<div class="entry">
+        <div class="entry-header">
+          <div class="entry-date">${d.data||'—'}</div>
+          <div class="entry-content">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">
+              <span style="font-size:11px;padding:1px 7px;border-radius:8px;background:${c.bg};color:${c.tc};font-weight:500;">${c.label}</span>
+            </div>
+            <div class="entry-proc">${d.desc||'—'}</div>
+            ${d.notas?`<div style="font-size:12px;color:var(--text3);margin-top:3px;">${d.notas}</div>`:''}
+          </div>
+          ${d.valor?`<div class="entry-cost">${parseFloat(d.valor).toFixed(2)}€</div>`:''}
+        </div>
+        <div class="entry-actions">
+          <button class="act-btn" onclick="openDespModal('${d._id}')">Editar</button>
+          <button class="act-btn del" onclick="delDesp('${d._id}')">Eliminar</button>
+        </div>
+      </div>`;
+    }).join('');
+
+  document.getElementById('sec-despesas').innerHTML=`
+    <div class="summary-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:1rem;">
+      <div class="metric"><div class="metric-label">Total gasto</div><div class="metric-value">${total?total.toFixed(2)+'€':'—'}</div><div class="metric-sub">despesas gerais</div></div>
+      <div class="metric"><div class="metric-label">Registos</div><div class="metric-value">${desps.length||'—'}</div><div class="metric-sub">despesas</div></div>
+      <div class="metric"><div class="metric-label">Categorias</div><div class="metric-value">${Object.keys(porCat).length||'—'}</div><div class="metric-sub">diferentes</div></div>
+    </div>
+    ${Object.keys(porCat).length>0?`<div class="card card-pad" style="margin-bottom:1rem;">
+      <div style="font-size:13px;font-weight:600;margin-bottom:8px;">Por categoria</div>
+      ${catSummary}
+      <div style="display:flex;justify-content:flex-end;margin-top:8px;padding-top:8px;border-top:1px solid var(--border);">
+        <span style="font-size:14px;font-weight:700;color:var(--earth);">Total: ${total.toFixed(2)}€</span>
+      </div>
+    </div>`:''}
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Despesas gerais</span>
+        <button class="go-btn" onclick="openDespModal(null)" style="background:var(--green);color:#fff;border-color:var(--green);">+ Adicionar</button>
+      </div>
+      ${rows}
+    </div>`;
 }
 
 // ── ALERTAS ──────────────────────────────────────────────────
