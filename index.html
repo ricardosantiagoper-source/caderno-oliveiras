@@ -552,23 +552,40 @@ onSnapshot(doc(db,STATE_DOC),(snap)=>{
   if(snap.exists()){
     try{
       const remote=JSON.parse(snap.data().data);
-      // merge: remote wins unless we're mid-edit
-      state=remote;
-      if(!state.despesas)state.despesas=[];
-      // ensure structure
+      // NUNCA sobrescrever — apenas merge seguro
+      // preservar parcelas existentes, apenas adicionar campos novos em falta
+      if(remote.parcelas && remote.parcelas.length>0){
+        state=remote;
+      }
+      // garantir campos novos sem apagar dados existentes
+      if(!state.despesas) state.despesas=[];
+      if(!state.parcelas) state.parcelas=defState().parcelas;
       state.parcelas.forEach(p=>{
-        if(!p.entries)p.entries={};
-        if(!p.fotos)p.fotos=[];
-        if(!p.colheitas)p.colheitas=[];
-        CATS.forEach(c=>{if(!p.entries[c.id])p.entries[c.id]=[];});
+        if(!p.entries) p.entries={};
+        if(!p.fotos) p.fotos=[];
+        if(!p.colheitas) p.colheitas=[];
+        if(!p.id) p.id=uid();
+        CATS.forEach(c=>{if(!p.entries[c.id]) p.entries[c.id]=[];});
       });
       rebuildTabs();
       refreshCurrentTab();
       setSyncStatus('ok');
-    }catch(e){console.error('Parse error',e);}
+    }catch(e){
+      console.error('Parse error',e);
+      setSyncStatus('offline');
+    }
   } else {
-    // First time — save default state
-    saveToFirebase();
+    // Documento não existe no Firebase — primeira vez a usar
+    // Só guarda se as parcelas estiverem mesmo vazias (sem nomes editados)
+    const temDados=state.parcelas.some(p=>
+      p.nome!==('Parcela '+( state.parcelas.indexOf(p)+1)) ||
+      p.arvores || p.area || p.variedade ||
+      (p.fotos&&p.fotos.length>0) ||
+      CATS.some(c=>p.entries[c.id]&&p.entries[c.id].length>0)
+    );
+    if(!temDados){
+      saveToFirebase();
+    }
   }
   setSyncStatus('ok');
 },(err)=>{
